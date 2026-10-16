@@ -1,0 +1,78 @@
+.dashboard-page .d-flex > main,
+.dashboard-page main.flex-grow-1 {
+	min-width: 0 !important;
+	max-width: 100%;
+	overflow-x: hidden;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+}
+
+.summary-section {
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.04);
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.summary-item {
+  padding: 1rem 1.1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  text-align: center;
+}
+
+.summary-label {
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+}
+
+.summary-value {
+  color: #0f172a;
+  font-size: clamp(1.25rem, 2vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.compact-form .card-body {
+  background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,250,252,0.96) 100%);
+}
+
+.table-card { width: 100%; max-width: 100%; overflow: visible; }
+#congTachMuiTable { display: block; width: 100%; max-width: 100%; min-width: 0; min-height: 0; height: min(58vh, 700px); max-height: 58vh; overflow: auto; position: relative; border-radius: 0.9rem; border: 1px solid #dbeafe; background: #fff; }
+#congTachMuiTable.table-scroll { overflow: auto; }
+#congTachMuiTable .tabulator { width: max-content !important; min-width: 100% !important; max-width: none !important; font-size: .82rem; }
+#congTachMuiTable .tabulator-tableholder { width: 100%; max-width: 100%; height: auto !important; max-height: none !important; overflow-x: auto !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; scrollbar-gutter: stable; }
+#congTachMuiTable::-webkit-scrollbar, #congTachMuiTable .tabulator-tableholder::-webkit-scrollbar { height: 12px; width: 12px; }
+#congTachMuiTable::-webkit-scrollbar-track, #congTachMuiTable .tabulator-tableholder::-webkit-scrollbar-track { background: #e9edf2; border-radius: 6px; }
+#congTachMuiTable::-webkit-scrollbar-thumb, #congTachMuiTable .tabulator-tableholder::-webkit-scrollbar-thumb { background: #8b98a8; border-radius: 6px; }
+#congTachMuiTable .tabulator-header { position: sticky; top: 0; z-index: 2; background: #eaf3ff; }
+#congTachMuiTable .tabulator-header .tabulator-col { background: #eaf3ff; color: #172033; font-weight: 700; border-right: 1px solid #cfe0f7; }
+#congTachMuiTable .tabulator-header .tabulator-col .tabulator-col-content { min-height: 58px; display: flex; align-items: center; justify-content: center; padding: 6px 4px; }
+#congTachMuiTable .tabulator-header .tabulator-col .tabulator-col-title { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.15; text-align: center; word-break: normal; }
+#congTachMuiTable .tabulator-header .tabulator-col:nth-child(2) { background: #dfeecf; }
+#congTachMuiTable .tabulator-header .tabulator-col:nth-child(n+4):nth-child(-n+6) { background: #12a9d1; color: #071b2a; }
+#congTachMuiTable .tabulator-header .tabulator-col:nth-child(n+11):nth-child(-n+11), #congTachMuiTable .tabulator-header .tabulator-col:nth-child(n+16):nth-child(-n+16), #congTachMuiTable .tabulator-header .tabulator-col:nth-child(n+21):nth-child(-n+21) { color: #df2020; }
+#congTachMuiTable .tabulator-cell[tabulator-field="productionDate"], #congTachMuiTable .tabulator-cell[tabulator-field="totalBtp"], #congTachMuiTable .tabulator-cell[tabulator-field="totalTime"], #congTachMuiTable .tabulator-cell[tabulator-field="totalProductivity"], #congTachMuiTable .tabulator-cell[tabulator-field="morningProductivity"], #congTachMuiTable .tabulator-cell[tabulator-field="afternoonProductivity"], #congTachMuiTable .tabulator-cell[tabulator-field="eveningProductivity"] { background: #f1f3f5; color: #64748b; }
+#catalogPanel { border-left: 4px solid #f3c74d !important; }
+#congTachMuiTable .tabulator-row.tabulator-selected { background: rgba(191, 219, 254, 0.28); }
+@media (max-width: 991px) {
+  #congTachMuiTable { overflow-x: auto; }
+  .summary-grid { grid-template-columns: repeat(2, minmax(160px, 1fr)); }
+}
+@media (max-width: 576px) {
+  .summary-grid { grid-template-columns: 1fr; }
+  .toolbar-actions { justify-content: flex-start; }
+}

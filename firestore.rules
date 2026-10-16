@@ -1,0 +1,175 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.admin == true || (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid))
+          && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+            || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'dev')
+        )
+      );
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+
+      allow create: if isOwner(userId)
+        && request.resource.data.role in ['admin', 'staff', 'dev']
+        && request.resource.data.email is string
+        && request.resource.data.keys().hasOnly([
+          'name', 'email', 'role', 'department', 'departmentId', 'pagePermissions', 'teamId', 'avatar', 'createdAt', 'updatedAt', 'password'
+        ]);
+
+      allow update: if (
+          isOwner(userId)
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.email == resource.data.email
+          && request.resource.data.keys().hasOnly([
+            'name', 'email', 'role', 'department', 'departmentId', 'pagePermissions', 'teamId', 'avatar', 'createdAt', 'updatedAt', 'password'
+          ])
+        ) || isAdmin();
+
+      allow delete: if isAdmin();
+    }
+
+    match /production/{docId} {
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'ownerId', 'productionDate', 'lot', 'type', 'kgA', 'percentA', 'kgB', 'percentB', 'kgC', 'percentC', 'kgCNoSeed', 'percentCNoSeed', 'materialType', 'manufacturer', 'region', 'warehouse', 'vehicle', 'materialKind', 'createdAt', 'updatedAt'
+        ]);
+
+      allow update: if (
+          isSignedIn()
+          && resource.data.ownerId == request.auth.uid
+          && request.resource.data.ownerId == resource.data.ownerId
+          && request.resource.data.keys().hasOnly([
+            'ownerId', 'productionDate', 'lot', 'type', 'kgA', 'percentA', 'kgB', 'percentB', 'kgC', 'percentC', 'kgCNoSeed', 'percentCNoSeed', 'materialType', 'manufacturer', 'region', 'warehouse', 'vehicle', 'materialKind', 'createdAt', 'updatedAt'
+          ])
+        ) || isAdmin();
+
+      allow delete: if (isSignedIn() && resource.data.ownerId == request.auth.uid) || isAdmin();
+    }
+
+    match /congTachMui/{docId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.teamId is string;
+      allow update: if isAdmin()
+        || (isSignedIn()
+          && resource.data.ownerId == request.auth.uid
+          && request.resource.data.ownerId == resource.data.ownerId
+          && request.resource.data.teamId == resource.data.teamId);
+      allow delete: if isAdmin();
+    }
+
+    match /nhapLieuSanXuat/{docId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isAdmin()
+        || (isSignedIn()
+          && resource.data.ownerId == request.auth.uid
+          && request.resource.data.ownerId == resource.data.ownerId);
+      allow delete: if isAdmin();
+    }
+
+    match /settings/{docId} {
+      function isLabelWhiteSettingDoc() {
+        return docId == 'labelWhiteSettings' || docId == 'labelWhiteLastPrint' || docId == 'labelWhiteConfigs';
+      }
+
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && (isAdmin() || isLabelWhiteSettingDoc());
+      allow delete: if isAdmin();
+    }
+
+    match /thanhpham/{productId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /printHistory/{historyId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /productCounters/{counterId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.nextSTT >= 0;
+      allow update: if isAdmin() || (
+        isSignedIn()
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.nextSTT >= resource.data.nextSTT
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /handWeighingDrafts/{ownerId} {
+      allow read: if isOwner(ownerId) || isAdmin();
+      allow create: if isAdmin() || (
+        isOwner(ownerId)
+        && request.resource.data.ownerId == request.auth.uid
+      );
+      allow update: if isAdmin() || (
+        isOwner(ownerId)
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == resource.data.ownerId
+      );
+      allow delete: if isAdmin() || isOwner(ownerId);
+    }
+
+    // Reference data for frozen-mango traceability. Operators may cache this data locally.
+    match /process_stages/{stageId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    match /reject_reasons/{reasonId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // Lots and their material-balance cache can only be changed by trusted server code.
+    match /lots/{lotId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // Append-only genealogy events. The Cloud Functions Admin SDK bypasses Rules.
+    match /stage_events/{eventId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // Idempotency markers for the quantity-cache trigger are server-private.
+    match /stage_event_cache_applications/{eventId} {
+      allow read, write: if false;
+    }
+
+    match /activityLogArchive/{archiveDate} {
+      allow read, write: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

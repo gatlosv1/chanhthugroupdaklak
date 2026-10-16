@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Xử lý công đoạn - Chánh Thu</title>
+    <link rel="stylesheet" href="./css/traceability.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <a class="brand" href="./dashboard.html" aria-label="Về dashboard">
+        <img src="./images/Logo.png" alt="Chánh Thu" />
+        <span>
+          <strong>CHÁNH THU</strong>
+          <small>Truy xuất sản xuất</small>
+        </span>
+      </a>
+      <div class="connection" id="connectionStatus" aria-live="polite">Đang kết nối...</div>
+    </header>
+    <nav class="trace-nav" aria-label="Truy xuất">
+      <a href="./traceability.html">Nhập hàng</a>
+      <a href="./traceability-stage.html" aria-current="page">Xử lý công đoạn</a>
+      <a href="./traceability-dashboard.html">Tổng quan</a>
+    </nav>
+
+    <div id="toastRegion" class="toast-region" role="status" aria-live="polite"></div>
+
+    <main class="app-main app-main--wide">
+      <section class="screen-heading">
+        <p id="stagePhase">Đang tải...</p>
+        <h1 id="stageTitle">Xử lý công đoạn</h1>
+        <span id="operatorLabel">-</span>
+      </section>
+
+      <nav id="stageTabs" class="stage-tabs" aria-label="Chọn công đoạn"></nav>
+
+      <section id="noAccessPanel" class="notice notice--error is-hidden" role="alert">
+        <strong>Không có quyền thao tác</strong>
+        <span id="noAccessMessage"></span>
+      </section>
+
+      <div id="stageLayout" class="stage-layout is-hidden">
+        <section class="queue-panel" aria-labelledby="queueTitle">
+          <div class="section-title">
+            <div>
+              <p>Hàng chờ</p>
+              <h2 id="queueTitle">Lô cần xử lý</h2>
+            </div>
+            <span id="queueCount" class="count">0</span>
+          </div>
+          <div id="lotSelectorMount"></div>
+        </section>
+
+        <section class="entry-panel" aria-labelledby="actionTitle">
+          <div class="section-title">
+            <div>
+              <p>Phiếu thao tác</p>
+              <h2 id="actionTitle">Kết quả công đoạn</h2>
+            </div>
+            <span id="stageBadge" class="stage-badge">-</span>
+          </div>
+          <div id="stageProgressMount"></div>
+          <div id="stageFormMount"></div>
+        </section>
+
+        <section class="queue-panel stage-history" aria-labelledby="historyTitle">
+          <div class="section-title">
+            <div>
+              <p>Truy xuất</p>
+              <h2 id="historyTitle">Lịch sử lô</h2>
+            </div>
+          </div>
+          <div id="historyMount"></div>
+        </section>
+      </div>
+    </main>
+
+    <script type="module" src="./js/traceability/stagePage.js"></script>
+  </body>
+</html>

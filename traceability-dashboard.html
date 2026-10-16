@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tổng quan truy xuất - Chánh Thu</title>
+    <link rel="stylesheet" href="./css/traceability.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <a class="brand" href="./dashboard.html" aria-label="Về dashboard">
+        <img src="./images/Logo.png" alt="Chánh Thu" />
+        <span>
+          <strong>CHÁNH THU</strong>
+          <small>Truy xuất sản xuất</small>
+        </span>
+      </a>
+      <div class="connection" id="connectionStatus" aria-live="polite">Đang kết nối...</div>
+    </header>
+    <nav class="trace-nav" aria-label="Truy xuất">
+      <a href="./traceability.html">Nhập hàng</a>
+      <a href="./traceability-stage.html">Xử lý công đoạn</a>
+      <a href="./traceability-dashboard.html" aria-current="page">Tổng quan</a>
+    </nav>
+
+    <div id="toastRegion" class="toast-region" role="status" aria-live="polite"></div>
+
+    <main class="app-main app-main--wide">
+      <section class="screen-heading">
+        <p>Truy xuất xoài đông lạnh</p>
+        <h1>Tổng quan sản xuất</h1>
+        <span id="operatorLabel">-</span>
+      </section>
+
+      <section id="noAccessPanel" class="notice notice--error is-hidden" role="alert">
+        <strong>Không có quyền xem</strong>
+        <span id="noAccessMessage"></span>
+      </section>
+
+      <div id="dashboardBody" class="is-hidden">
+        <section class="stat-grid" aria-label="Tổng hợp">
+          <div class="stat-card"><span>Tổng số lô</span><strong id="statTotal">0</strong></div>
+          <div class="stat-card"><span>Đang chờ xử lý</span><strong id="statWaiting">0</strong></div>
+          <div class="stat-card"><span>Khối lượng đang xử lý (kg)</span><strong id="statKg">0</strong></div>
+          <div class="stat-card stat-card--ok"><span>Hoàn tất</span><strong id="statCompleted">0</strong></div>
+          <div class="stat-card stat-card--bad"><span>Đã loại bỏ</span><strong id="statRejected">0</strong></div>
+        </section>
+
+        <section class="queue-panel" aria-labelledby="stageTableTitle">
+          <div class="section-title">
+            <div>
+              <p>Hàng chờ</p>
+              <h2 id="stageTableTitle">Số lô theo công đoạn</h2>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="intake-table">
+              <thead>
+                <tr><th>Công đoạn</th><th>Bộ phận</th><th>Số lô chờ</th><th>Khối lượng (kg)</th><th></th></tr>
+              </thead>
+              <tbody id="stageRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="queue-panel" aria-labelledby="dailyTitle">
+          <div class="section-title">
+            <div>
+              <p>Sản lượng</p>
+              <h2 id="dailyTitle">Kg đạt / hư theo ngày</h2>
+            </div>
+          </div>
+          <div class="list-toolbar list-toolbar--dashboard">
+            <select id="stageFilter" aria-label="Công đoạn"></select>
+            <select id="rangeFilter" aria-label="Số ngày">
+              <option value="7">7 ngày gần nhất</option>
+              <option value="14" selected>14 ngày gần nhất</option>
+              <option value="30">30 ngày gần nhất</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table class="intake-table">
+              <thead>
+                <tr>
+                  <th>Ngày</th><th>Nhập (kg)</th><th id="passedHeader">Đạt (kg)</th>
+                  <th>Hư nặng (kg)</th><th>Hư nhẹ (kg)</th><th>Hao hụt (kg)</th>
+                </tr>
+              </thead>
+              <tbody id="dailyRows"></tbody>
+            </table>
+          </div>
+          <p id="dailyHint" class="field-hint"></p>
+        </section>
+      </div>
+    </main>
+
+    <script type="module" src="./js/traceability/dashboardPage.js"></script>
+  </body>
+</html>

@@ -1,0 +1,5 @@
+.firebase/
+backup/
+.env
+.env.*
+js/firebase.local.js

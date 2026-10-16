@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Năng suất sản xuất</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {50:'#f8fafc',100:'#eef2ff',500:'#3b82f6',600:'#2563eb',700:'#1d4ed8'}
+            },
+            boxShadow: { soft: '0 10px 30px rgba(15, 23, 42, 0.10)' }
+          }
+        }
+      };
+    </script>
+    <link href="https://unpkg.com/tabulator-tables@5.5.4/dist/css/tabulator.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="./css/style.css" />
+    <link rel="stylesheet" href="./css/dashboard.css" />
+    <link rel="stylesheet" href="./css/nhap-lieu-san-xuat.css" />
+  </head>
+  <body class="dashboard-page">
+    <div class="dashboard-shell">
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <h2 class="sidebar-title">Production Data</h2>
+          <p class="sidebar-subtitle">Quản lý năng suất sản xuất</p>
+        </div>
+        <nav class="sidebar-nav">
+          <a class="nav-link" href="./dashboard.html">Dashboard</a>
+          <a class="nav-link" href="./production.html">Phần trăm BTP</a>
+          <a class="nav-link active" href="./nhap-lieu-san-xuat.html">Năng suất sản xuất</a>
+          <a class="nav-link" href="./report.html">Báo cáo</a>
+          <a class="nav-link" href="./cong-tach-mui.html">Năng xuất tách múi</a>
+          <a class="nav-link" href="./history.html">Lịch sử thao tác</a>
+          <a class="nav-link" href="./profile.html">Profile</a>
+          <a class="nav-link admin-only" href="./settings.html" data-admin-only-link>⚙ Quản lý danh mục</a>
+          <a class="nav-link" href="#" data-action="logout">Đăng xuất</a>
+        </nav>
+      </aside>
+      <main class="page-content">
+        <header class="page-header">
+          <div class="page-heading">
+            <p class="eyebrow">Theo dõi BTP, thời gian và năng suất theo công đoạn.</p>
+            <h1 class="page-title">Năng suất sản xuất</h1>
+            <div class="warning-note" role="alert">
+              <span class="warning-icon">⚠</span>
+              <p class="warning-text">Lưu ý: Trang này chỉ hỗ trợ theo dõi, không đại diện cho thông tin chính thức. Hãy kiểm tra và đọc đúng dữ liệu; nếu phát hiện lỗi hoặc thiếu dữ liệu, vui lòng báo admin.</p>
+            </div>
+          </div>
+          <div class="toolbar-actions">
+            <span id="topRealtimeClock" class="last-updated">--</span>
+            <button class="btn btn-secondary" id="refreshBtn" type="button">Refresh</button>
+            <button class="btn btn-primary" id="exportBtn" type="button">Xuất Excel</button>
+          </div>
+        </header>
+        <section class="card border-0 shadow-sm rounded-4 mb-3 compact-form">
+          <div class="card-body p-3 p-lg-4">
+            <div class="row g-3 align-items-end">
+              <div class="col-12 col-md-6 col-lg-2"><label class="form-label small mb-1" for="productionDate">Ngày tháng</label><input id="productionDate" class="form-control form-control-sm" type="date" /></div>
+              <div class="col-12 col-md-6 col-lg-3"><label class="form-label small mb-1" for="processOne">Công đoạn 1</label><select id="processOne" class="form-select form-select-sm"><option value="">-- Chọn công đoạn --</option></select></div>
+              <div class="col-12 col-md-6 col-lg-2"><label class="form-label small mb-1" for="processTwo">Công đoạn 2</label><select id="processTwo" class="form-select form-select-sm" disabled aria-disabled="true" title="Công đoạn 2 đang bị khóa"><option value="">-- Chọn --</option></select></div>
+              <div class="col-12 col-md-6 col-lg-2"><label class="form-label small mb-1" for="itemType">Loại</label><select id="itemType" class="form-select form-select-sm"><option value="">-- Chọn loại --</option></select></div>
+              <div class="col-12 col-md-6 col-lg-3"><label class="form-label small mb-1" for="note">Thông tin thêm</label><input id="note" class="form-control form-control-sm" placeholder="Không bắt buộc" /></div>
+              <div class="col-12 col-md-6 col-lg-2"><label class="form-label small mb-1" for="activeShift">Ca hiện tại</label><select id="activeShift" class="form-select form-select-sm" required><option value="">-- Chọn ca --</option><option value="morning">Ca sáng</option><option value="afternoon">Ca chiều</option><option value="evening">Ca tối</option></select></div>
+              <div class="col-12 col-md-6 col-lg-2"><label class="form-label small mb-1" for="shiftPeople">Số người</label><input id="shiftPeople" class="form-control form-control-sm" type="number" min="0" step="1" /></div>
+              <div class="col-12 col-md-6 col-lg-2"><label class="form-label small mb-1" for="shiftHours">Số giờ</label><input id="shiftHours" class="form-control form-control-sm" type="number" min="0" step="0.5" /></div>
+              <div class="col-12 col-md-6 col-lg-2"><label class="form-label small mb-1" for="shiftBtp">BTP ca hiện tại</label><input id="shiftBtp" class="form-control form-control-sm" type="number" min="0" step="0.01" /></div>
+              <div class="col-12 col-lg-4 d-flex justify-content-lg-end">
+                <div class="d-flex flex-row gap-2 action-button-group">
+                  <button class="btn btn-primary btn-sm action-btn" id="addRowBtn">Thêm dòng</button>
+                  <button class="btn btn-outline-danger btn-sm action-btn" id="deleteRowBtn">Xóa dòng</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="card border-0 shadow-sm rounded-4 mb-3 summary-section">
+          <div class="card-body p-3 p-lg-4">
+            <div class="summary-grid">
+              <div class="summary-item">
+                <div class="summary-label">Tổng BTP</div>
+                <div class="summary-value" id="totalBtp">0</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">Tổng thời gian</div>
+                <div class="summary-value" id="totalTime">0</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">Năng suất trung bình</div>
+                <div class="summary-value" id="totalProductivity">0</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">Số dòng</div>
+                <div class="summary-value" id="draftRows">0</div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="card border-0 shadow-sm rounded-4 p-2 table-card"><div id="nhapLieuSanXuatTable" class="table-scroll"></div></section>
+      </main>
+    </div>
+    <script src="https://unpkg.com/tabulator-tables@5.5.4/dist/js/tabulator.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+    <script type="module" src="./js/nhapLieuSanXuat.js"></script>
+    <script type="module" src="./js/logout.js"></script>
+  </body>
+</html>

@@ -1,0 +1,64 @@
+:root {
+        --card: rgba(255, 255, 255, 0.95);
+        --line: rgba(148, 163, 184, 0.2);
+      }
+      html { scroll-behavior: smooth; }
+      body { background: linear-gradient(180deg, #effaf1 0%, #f7fafc 100%); }
+      .glass-card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+        backdrop-filter: blur(12px);
+      }
+      .sticky-header {
+        position: sticky; top: 0; z-index: 30;
+        background: rgba(255, 255, 255, 0.82);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      }
+      .company-logo {
+        width: 52px; height: 52px; border-radius: 18px;
+        background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+        box-shadow: 0 12px 24px rgba(21, 128, 61, 0.2);
+        color: white; display: flex; align-items: center; justify-content: center;
+        font-weight: 800; letter-spacing: 0.08em; flex-shrink: 0;
+      }
+      .table-scroll { overflow-x: auto; }
+      .cell-input, .lot-input, .text-input, .big-input {
+        width: 100%; border-radius: 0.75rem; border: 1px solid #dbe4ea;
+        background: #f8fafc; color: #0f172a; padding: 0.7rem 0.8rem;
+        font-size: 0.9rem; transition: all 0.2s ease;
+      }
+      .big-input {
+        font-size: 2.2rem; font-weight: 800; text-align: center;
+        padding: 1.1rem 1rem; letter-spacing: 0.02em;
+        border-width: 2px; border-color: #86efac;
+        background: #f0fdf4;
+      }
+      .big-input:focus {
+        outline: none; border-color: #16a34a;
+        box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2);
+        background: white;
+      }
+      .cell-input:focus, .lot-input:focus, .text-input:focus {
+        outline: none; border-color: rgba(37, 99, 235, 0.75);
+        box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15); background: white;
+      }
+      .summary-badge {
+        display: inline-flex; align-items: center; justify-content: center;
+        min-width: 2.3rem; padding: 0.2rem 0.5rem; border-radius: 999px;
+        background: #eff6ff; color: #1d4ed8; font-size: 0.72rem; font-weight: 700;
+      }
+      .metric-value { font-variant-numeric: tabular-nums; }
+      .active-cell {
+        background: #dcfce7 !important;
+        outline: 2px solid #16a34a;
+        outline-offset: -2px;
+      }
+      .active-row { background: #f0fdf4 !important; }
+      @media print {
+        body { background: white !important; }
+        .hide-on-print { display: none !important; }
+        .print-card { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
+        .sticky-header { position: static !important; }
+      }

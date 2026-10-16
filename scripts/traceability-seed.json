@@ -1,0 +1,74 @@
+{
+    "reject_reasons":  [
+                           {
+                               "id":  "HEAVY_DAMAGE",
+                               "name":  "Xoài dập, hư hỏng nặng",
+                               "severity":  "major",
+                               "reworkEligible":  false
+                           },
+                           {
+                               "id":  "LIGHT_DAMAGE",
+                               "name":  "Xoài dập, hư hỏng nhẹ",
+                               "severity":  "minor",
+                               "reworkEligible":  true,
+                               "reworkStageId":  "SOAK_1_1"
+                           },
+                           {
+                               "id":  "PEEL_DEFECT",
+                               "name":  "Vỏ, trái hư hỏng",
+                               "severity":  "major",
+                               "reworkEligible":  false
+                           },
+                           {
+                               "id":  "PEEL_LEFTOVER",
+                               "name":  "Còn sót vỏ",
+                               "severity":  "minor",
+                               "reworkEligible":  true,
+                               "reworkStageId":  "PEEL"
+                           },
+                           {
+                               "id":  "FRAGMENT",
+                               "name":  "Vụn",
+                               "severity":  "minor",
+                               "reworkEligible":  false
+                           },
+                           {
+                               "id":  "SEED",
+                               "name":  "Hạt",
+                               "severity":  "major",
+                               "reworkEligible":  false
+                           },
+                           {
+                               "id":  "SPOILAGE",
+                               "name":  "Hư",
+                               "severity":  "major",
+                               "reworkEligible":  false
+                           },
+                           {
+                               "id":  "SHAPE_DEFECT",
+                               "name":  "Định hình không đạt",
+                               "severity":  "minor",
+                               "reworkEligible":  true,
+                               "reworkStageId":  "SHAPE"
+                           },
+                           {
+                               "id":  "CHEEK_QC_FAIL",
+                               "name":  "Kiểm má không đạt",
+                               "severity":  "minor",
+                               "reworkEligible":  true,
+                               "reworkStageId":  "SHAPE"
+                           },
+                           {
+                               "id":  "FOREIGN_MATERIAL",
+                               "name":  "Dị vật",
+                               "severity":  "major",
+                               "reworkEligible":  false
+                           },
+                           {
+                               "id":  "METAL_DETECTED",
+                               "name":  "Phát hiện kim loại",
+                               "severity":  "critical",
+                               "reworkEligible":  false
+                           }
+                       ]
+}

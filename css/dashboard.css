@@ -1,0 +1,280 @@
+.dashboard-page {
+  background: linear-gradient(180deg, #f8fafc 0%, #eef3ff 100%);
+  color: #0f172a;
+}
+
+.dashboard-page .d-flex.min-vh-100 {
+  display: flex !important;
+  min-height: 100vh;
+}
+
+.dashboard-page .sidebar {
+  width: 260px;
+  min-height: 100vh;
+  background: rgba(255, 255, 255, 0.88);
+  border-right: 1px solid #e2e8f0;
+  padding: 1.35rem 1rem 1.5rem !important;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.05);
+}
+
+.dashboard-page .sidebar .mb-4 {
+  margin-bottom: 1.1rem !important;
+  padding: 0.3rem 0.7rem 0.95rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.dashboard-page .sidebar h2,
+.dashboard-page .sidebar .h5 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #0f172a;
+}
+
+.dashboard-page .sidebar p,
+.dashboard-page .sidebar .text-secondary,
+.dashboard-page .sidebar .small {
+  color: #64748b !important;
+  margin-top: 0.2rem;
+  margin-bottom: 0 !important;
+}
+
+.dashboard-page .sidebar .nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.dashboard-page .sidebar .nav-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  color: #475569;
+  padding: 0.72rem 0.8rem;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  background: transparent;
+}
+
+.dashboard-page .sidebar .nav-link:hover,
+.dashboard-page .sidebar .nav-link:focus {
+  background: #f8fafc;
+  color: #0f172a;
+  text-decoration: none;
+}
+
+.dashboard-page .sidebar .nav-link.active {
+  background: linear-gradient(180deg, #eef4ff 0%, #e7efff 100%);
+  color: #1d4ed8;
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.12);
+}
+
+.dashboard-page .sidebar .nav-link.active::after {
+  content: "";
+  position: absolute;
+  left: 0.8rem;
+  right: 0.8rem;
+  bottom: 0.28rem;
+  height: 2px;
+  border-radius: 999px;
+  background: #2563eb;
+}
+
+.dashboard-page main.flex-grow-1,
+.dashboard-page main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: block;
+  background: transparent !important;
+}
+
+.dashboard-page .card {
+  display: block;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.18) !important;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.04) !important;
+  border-radius: 18px !important;
+}
+
+.dashboard-page .card-body {
+  background: transparent;
+}
+
+.dashboard-page .btn,
+.dashboard-page .btn-sm,
+.dashboard-page .btn-lg {
+  border-radius: 10px !important;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.dashboard-page .btn:hover,
+.dashboard-page .btn:focus {
+  transform: translateY(-1px);
+}
+
+.dashboard-page .btn-outline-secondary {
+  background: #fff;
+  border-color: #dbe3ef;
+  color: #1e293b;
+}
+
+.dashboard-page .btn-outline-secondary:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.dashboard-page .btn-primary {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  border-color: transparent;
+  color: white;
+  box-shadow: 0 12px 22px rgba(37, 99, 235, 0.22);
+}
+
+.dashboard-page .btn-primary:hover {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+}
+
+.dashboard-page .btn-outline-success {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #166534;
+}
+
+.dashboard-page .btn-outline-success:hover {
+  background: #d1fae5;
+}
+
+.dashboard-page .form-control,
+.dashboard-page .form-select,
+.dashboard-page input,
+.dashboard-page select {
+  border: 1px solid #dfeaf5;
+  background: #fff;
+  border-radius: 10px;
+  color: #0f172a;
+  min-height: 42px;
+  box-shadow: none;
+}
+
+.dashboard-page .form-select option {
+  color: #0f172a;
+  background: #ffffff;
+  padding: 0.6rem 0.75rem;
+}
+
+.dashboard-page .form-select option:checked,
+.dashboard-page .form-select option:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.dashboard-page .form-control:focus,
+.dashboard-page .form-select:focus,
+.dashboard-page input:focus,
+.dashboard-page select:focus {
+  border-color: rgba(96, 165, 250, 0.8);
+  box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.12);
+  outline: none;
+}
+
+.dashboard-page .text-warning-emphasis,
+.dashboard-page .small.text-warning-emphasis {
+  color: #7c2d12 !important;
+}
+
+.dashboard-page .warning-note,
+.dashboard-page .alert,
+.dashboard-page .note-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  background: linear-gradient(180deg, #fff7ed 0%, #fffaf5 100%);
+  border: 1px solid #fed7aa;
+  border-radius: 12px;
+  padding: 0.85rem 0.9rem;
+  color: #7c2d12;
+  box-shadow: 0 10px 25px rgba(251, 146, 60, 0.08);
+}
+
+.dashboard-page .warning-note p,
+.dashboard-page .alert p,
+.dashboard-page .note-box p {
+  margin: 0;
+  color: #7c2d12;
+  line-height: 1.55;
+}
+
+.dashboard-page .toolbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+}
+
+.dashboard-page .toolbar-actions .small,
+.dashboard-page .toolbar-actions span[id$='Clock'],
+.dashboard-page .toolbar-actions #topRealtimeClock,
+.dashboard-page .toolbar-actions #reportTimestamp {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 0.8rem;
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.dashboard-page .admin-only.is-hidden {
+  display: none !important;
+}
+
+#createUserForm .form-control,
+#createUserForm .form-select {
+  border-radius: 0.75rem;
+}
+
+#createUserResult {
+  border-radius: 0.8rem;
+}
+
+@media (max-width: 991px) {
+  .dashboard-page .d-flex.min-vh-100 {
+    flex-direction: column;
+  }
+
+  .dashboard-page .sidebar {
+    width: 100%;
+    min-height: auto;
+    border-right: none;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .dashboard-page .toolbar-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-page .sidebar {
+    width: 100%;
+    min-height: auto;
+  }
+
+  .dashboard-page .d-flex {
+    flex-direction: column;
+  }
+
+  .dashboard-page .toolbar-actions {
+    width: 100%;
+  }
+}

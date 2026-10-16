@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>In Tem Nhãn Trắng</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+      @page {
+        size: 90mm 60mm;
+        margin: 0;
+      }
+
+      html, body {
+        margin: 0;
+        padding: 0;
+        min-height: 100%;
+        background: #f3f4f6;
+      }
+
+      body {
+        font-family: "Segoe UI", Arial, sans-serif;
+      }
+
+      .label-box {
+        position: relative;
+        width: 90mm;
+        height: 60mm;
+        background: #ffffff;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+        overflow: hidden;
+      }
+
+      .label-content {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 4mm;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        line-height: 1.15;
+      }
+
+      @media print {
+        @page {
+          size: 90mm 60mm;
+          margin: 0;
+        }
+
+        html, body {
+          background: #ffffff !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          visibility: visible !important;
+        }
+
+        body > *:not(.printable-label) {
+          display: none !important;
+          visibility: hidden !important;
+        }
+
+        .printable-label,
+        .printable-label * {
+          visibility: visible !important;
+        }
+
+        .printable-label {
+          position: fixed !important;
+          left: 0 !important;
+          top: 0 !important;
+          width: 90mm !important;
+          height: 60mm !important;
+          margin: 0 !important;
+          border: none !important;
+          box-shadow: none !important;
+          background: #fff !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          z-index: 9999;
+        }
+
+        .label-content {
+          position: static !important;
+          inset: auto !important;
+          width: 100% !important;
+          height: 100% !important;
+          padding: 0 !important;
+        }
+      }
+    </style>
+  </head>
+  <body class="text-slate-800 antialiased">
+    <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      <div class="rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/60">
+        <div class="flex flex-col gap-8 p-5 sm:p-7 lg:flex-row lg:p-8">
+          <section class="no-print w-full lg:max-w-xl">
+            <div class="mb-5">
+              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Tem nhãn trắng</p>
+              <h1 class="mt-2 text-2xl font-bold text-slate-800 sm:text-3xl">In nhãn trắng</h1>
+            </div>
+
+            <div class="space-y-5">
+              <div>
+                <label for="labelTextInput" class="mb-2 block text-sm font-medium text-slate-700">Nội dung tem</label>
+                <textarea
+                  id="labelTextInput"
+                  rows="4"
+                  placeholder="Nhập nội dung tem..."
+                  class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-800 shadow-sm outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                ></textarea>
+              </div>
+
+              <div class="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label class="mb-2 block text-sm font-medium text-slate-700">Font</label>
+                  <select id="fontSelect" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                    <option value="Calibri">Calibri</option>
+                    <option value="Arial">Arial</option>
+                    <option value="Tahoma">Tahoma</option>
+                    <option value="Verdana">Verdana</option>
+                    <option value="Times New Roman">Times New Roman</option>
+                    <option value="Georgia">Georgia</option>
+                    <option value="Courier New">Courier New</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="mb-2 block text-sm font-medium text-slate-700">Cỡ chữ</label>
+                  <div class="flex items-center gap-2">
+                    <button type="button" data-size-action="decrease" class="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-lg font-semibold text-slate-700 hover:bg-slate-100">−</button>
+                    <input id="fontSizeInput" type="number" min="6" max="500" value="12" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-center text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                    <button type="button" data-size-action="increase" class="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-lg font-semibold text-slate-700 hover:bg-slate-100">+</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid gap-3 sm:grid-cols-3">
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-2">
+                  <button id="boldBtn" type="button" class="flex w-full items-center justify-center rounded-lg bg-white px-3 py-2 text-base font-bold text-slate-800 shadow-sm transition hover:bg-slate-100">B</button>
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-2">
+                  <button id="italicBtn" type="button" class="flex w-full items-center justify-center rounded-lg bg-white px-3 py-2 text-base italic text-slate-800 shadow-sm transition hover:bg-slate-100">I</button>
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-2">
+                  <button id="underlineBtn" type="button" class="flex w-full items-center justify-center rounded-lg bg-white px-3 py-2 text-base underline text-slate-800 shadow-sm transition hover:bg-slate-100">U</button>
+                </div>
+              </div>
+
+              <div class="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label class="mb-2 block text-sm font-medium text-slate-700">Màu chữ</label>
+                  <div class="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                    <input id="textColorInput" type="color" value="#111827" class="h-10 w-12 cursor-pointer rounded border-0 bg-transparent p-0" />
+                    <span id="colorTextLabel" class="text-sm font-medium text-slate-700">#111827</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="mb-2 block text-sm font-medium text-slate-700">Căn chỉnh</label>
+                  <button id="alignBtn" type="button" class="flex w-full items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5 text-sm font-semibold text-blue-700 shadow-sm transition hover:bg-blue-100">
+                    <i class="fa-solid fa-align-center"></i>
+                    Căn giữa
+                  </button>
+                </div>
+              </div>
+
+              <div class="grid gap-3 sm:grid-cols-[1fr_auto]">
+                <div>
+                  <label for="configNameInput" class="mb-2 block text-sm font-medium text-slate-700">Tên cấu hình</label>
+                  <input id="configNameInput" type="text" placeholder="Ví dụ: Tem mác lớn" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                </div>
+                <div class="flex items-end">
+                  <button id="saveConfigBtn" type="button" class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-500">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    Lưu cấu hình
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label for="configSequenceInput" class="mb-2 block text-sm font-medium text-slate-700">Số thứ tự đã in của cấu hình</label>
+                <input id="configSequenceInput" type="number" min="0" value="0" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+              </div>
+
+              <div>
+                <label for="savedConfigSelect" class="mb-2 block text-sm font-medium text-slate-700">Chọn cấu hình</label>
+                <select id="savedConfigSelect" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                  <option value="">-- Chọn cấu hình --</option>
+                </select>
+              </div>
+
+              <div class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
+                <i class="fa-solid fa-circle-info mr-2"></i>
+                Chỉ in 1 trang duy nhất, kích thước 90x60mm cho mỗi tem.
+              </div>
+
+              <div class="grid gap-3 sm:grid-cols-[1fr_auto]">
+                <div>
+                  <label for="pdfQuantity" class="mb-2 block text-sm font-medium text-slate-700">Số lượng tem in</label>
+                  <input id="pdfQuantity" type="number" min="1" max="500" value="1" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                </div>
+                <div class="flex items-end gap-3">
+                  <button id="printBtn" type="button" onclick="printCurrentLabel()" class="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-800 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-slate-300 transition hover:bg-slate-700">
+                    <i class="fa-solid fa-print"></i>
+                    In tem
+                  </button>
+                  <button id="downloadPdfBtn" type="button" onclick="generatePdf(document.getElementById('pdfQuantity').value)" class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-500">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    Tải PDF
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="flex w-full flex-1 items-center justify-center rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-100 p-4 sm:p-6 lg:p-8">
+            <div class="printable-label label-box" aria-label="Preview tem nhãn trắng">
+              <div id="labelContent" class="label-content">A</div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="./js/labelTrang.js"></script>
+  </body>
+</html>

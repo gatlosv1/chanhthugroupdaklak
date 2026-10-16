@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Production Data Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: '#f8fafc',
+                100: '#eef2ff',
+                500: '#3b82f6',
+                600: '#2563eb',
+                700: '#1d4ed8'
+              },
+              slatebg: '#0f172a'
+            },
+            boxShadow: {
+              soft: '0 10px 30px rgba(15, 23, 42, 0.10)'
+            }
+          }
+        }
+      };
+    </script>
+    <link rel="stylesheet" href="./css/style.css" />
+    <style>
+      :root {
+        --bg: #f8fafc;
+        --panel: rgba(255, 255, 255, 0.9);
+        --panel-strong: #ffffff;
+        --muted: #64748b;
+        --text: #0f172a;
+        --line: #e2e8f0;
+        --primary: #2563eb;
+        --primary-soft: #eff6ff;
+        --primary-strong: #1d4ed8;
+        --shadow: 0 20px 45px rgba(15, 23, 42, 0.06);
+      }
+
+      * { box-sizing: border-box; }
+
+      html { scroll-behavior: smooth; }
+
+      body {
+        margin: 0;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 28%),
+          linear-gradient(180deg, #f8fafc 0%, #eef3ff 100%);
+        color: var(--text);
+      }
+
+      a { text-decoration: none; }
+
+      .landing-shell {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 48px 20px;
+      }
+
+      .landing-container {
+        width: min(1200px, 100%);
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: 1.25fr 0.75fr;
+        gap: 32px;
+        align-items: center;
+      }
+
+      .hero-copy {
+        background: rgba(255, 255, 255, 0.42);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        box-shadow: none;
+        border-radius: 24px;
+        padding: 32px 28px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: var(--primary-soft);
+        border: 1px solid rgba(96, 165, 250, 0.18);
+        color: var(--primary-strong);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 18px;
+      }
+
+      .hero-title {
+        margin: 0;
+        font-size: clamp(2.3rem, 4vw, 4.1rem);
+        line-height: 1.05;
+        letter-spacing: -0.065em;
+        font-weight: 800;
+        color: var(--text);
+      }
+
+      .hero-description {
+        margin-top: 20px;
+        color: var(--muted);
+        font-size: 1.08rem;
+        line-height: 1.8;
+        max-width: 760px;
+      }
+
+      .cta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: 28px;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 48px;
+        padding: 0.8rem 1.3rem;
+        border-radius: 12px;
+        font-weight: 700;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-strong) 100%);
+        color: #fff !important;
+        box-shadow: 0 14px 28px rgba(37, 99, 235, 0.2);
+      }
+
+      .btn-primary:hover {
+        background: linear-gradient(135deg, var(--primary-strong) 0%, #1e40af 100%);
+      }
+
+      .btn-outline-secondary {
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid var(--line);
+        color: var(--text);
+      }
+
+      .btn-outline-secondary:hover {
+        background: #f8fafc;
+      }
+
+      .feature-panel {
+        background: var(--panel-strong);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 24px;
+        box-shadow: var(--shadow);
+        padding: 28px 22px;
+      }
+
+      .feature-panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 18px;
+      }
+
+      .feature-panel-header h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text);
+      }
+
+      .feature-label {
+        padding: 7px 10px;
+        border-radius: 999px;
+        background: #f1f5f9;
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .feature-list {
+        display: grid;
+        gap: 12px;
+        margin: 0;
+      }
+
+      .feature-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 14px;
+        border-radius: 14px;
+        background: #f8fafc;
+        border: 1px solid #edf2f7;
+      }
+
+      .feature-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        color: var(--primary-strong);
+        font-size: 1.12rem;
+        font-weight: 800;
+        box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.12);
+      }
+
+      .feature-text {
+        font-size: 0.98rem;
+        font-weight: 600;
+        color: var(--text);
+        line-height: 1.5;
+      }
+
+      @media (max-width: 900px) {
+        .hero-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .hero-copy {
+          padding: 26px 20px;
+        }
+      }
+
+      @media (max-width: 576px) {
+        .landing-shell {
+          padding: 28px 14px;
+        }
+
+        .cta-row {
+          flex-direction: column;
+        }
+
+        .btn {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="landing-shell">
+      <section class="landing-container">
+        <div class="hero-grid">
+          <div class="hero-copy">
+            <div class="eyebrow">Production Sync</div>
+            <h1 class="hero-title">Hệ thống quản lý sản xuất</h1>
+            <p class="hero-description">
+              Theo dõi BTP, thời gian và năng suất theo tổ làm việc.<br />
+              Lưu ý: Trang này chỉ hỗ trợ theo dõi, không đại diện cho thông tin chính thức. Hãy kiểm tra và đọc đúng dữ liệu; nếu phát hiện lỗi hoặc thiếu dữ liệu, vui lòng báo admin.
+            </p>
+
+            <div class="cta-row">
+              <a class="btn btn-primary" href="./login.html">Đăng nhập</a>
+              <a class="btn btn-outline-secondary" href="./dashboard.html">Dashboard</a>
+            </div>
+          </div>
+
+          <aside class="feature-panel" aria-label="Tính năng chính">
+            <div class="feature-panel-header">
+              <h3>Tính năng chính</h3>
+              <span class="feature-label">Ops</span>
+            </div>
+
+            <div class="feature-list">
+              <div class="feature-item">
+                <div class="feature-icon">✓</div>
+                <div class="feature-text">Đăng nhập bằng email và mật khẩu</div>
+              </div>
+              <div class="feature-item">
+                <div class="feature-icon">◎</div>
+                <div class="feature-text">Phân quyền Admin/Staff</div>
+              </div>
+              <div class="feature-item">
+                <div class="feature-icon">◉</div>
+                <div class="feature-text">Profile và avatar</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./js/index.js"></script>
+  </body>
+</html>

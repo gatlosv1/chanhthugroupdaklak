@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Báo cáo sản xuất</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {50:'#f8fafc',100:'#eef2ff',500:'#3b82f6',600:'#2563eb',700:'#1d4ed8'}
+            },
+            boxShadow: { soft: '0 10px 30px rgba(15, 23, 42, 0.10)' }
+          }
+        }
+      };
+    </script>
+    <link rel="stylesheet" href="./css/style.css" />
+    <link rel="stylesheet" href="./css/dashboard.css" />
+    <link rel="stylesheet" href="./css/report-dashboard.css" />
+    <link rel="stylesheet" href="./css/report.css" />
+  </head>
+  <body class="dashboard-page">
+    <div class="d-flex min-vh-100">
+      <aside class="sidebar bg-dark text-white p-4">
+        <div class="mb-4">
+          <h2 class="h5 fw-bold">Production Data</h2>
+          <p class="text-secondary small mb-0">Phân tích và báo cáo</p>
+        </div>
+
+        <nav class="nav flex-column gap-2">
+          <a class="nav-link" href="./dashboard.html">Dashboard</a>
+          <a class="nav-link" href="./production.html">Phần trăm BTP</a>
+          <a class="nav-link" href="./nhap-lieu-san-xuat.html">Năng suất sản xuất</a>
+          <a class="nav-link" href="./cong-tach-mui.html">Năng xuất tách múi</a>
+          <a class="nav-link active" href="./report.html">Báo cáo</a>
+          <a class="nav-link" href="./history.html">Lịch sử thao tác</a>
+          <a class="nav-link" href="./profile.html">Profile</a>
+          <a class="nav-link admin-only" href="./settings.html" data-admin-only-link>⚙ Quản lý danh mục</a>
+          <a class="nav-link" href="#" data-action="logout">Đăng xuất</a>
+        </nav>
+      </aside>
+
+      <main class="flex-grow-1 bg-light p-3 p-lg-4">
+        <header class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3 mb-4">
+          <div>
+            <p class="text-muted mb-1">Biểu đồ và tổng quan vận hành</p>
+            <h1 class="h3 fw-bold mb-0">Báo cáo sản xuất</h1>
+          </div>
+          <div class="toolbar-actions">
+            <span id="reportTimestamp" class="small text-muted">--</span>
+            <button class="btn btn-outline-secondary btn-sm" id="refreshBtn" type="button">Refresh</button>
+          </div>
+        </header>
+
+        <section class="filter-card mb-4">
+          <form id="reportFilterForm" class="row g-3 align-items-end">
+            <div class="col-12 col-md-6 col-xl-2">
+              <label class="form-label" for="fromDate">Từ ngày</label>
+              <input id="fromDate" type="date" class="form-control" />
+            </div>
+            <div class="col-12 col-md-6 col-xl-2">
+              <label class="form-label" for="toDate">Đến ngày</label>
+              <input id="toDate" type="date" class="form-control" />
+            </div>
+            <div class="col-12 col-md-6 col-xl-2">
+              <label class="form-label" for="teamFilter">Tổ</label>
+              <select id="teamFilter" class="form-select">
+                <option value="all">Tất cả</option>
+              </select>
+            </div>
+            <div class="col-12 col-md-6 col-xl-2">
+              <label class="form-label" for="processFilter">Công đoạn</label>
+              <select id="processFilter" class="form-select">
+                <option value="all">Tất cả</option>
+              </select>
+            </div>
+            <div class="col-12 col-md-6 col-xl-2">
+              <label class="form-label" for="sourceFilter">Nguồn dữ liệu</label>
+              <select id="sourceFilter" class="form-select">
+                <option value="all">Tất cả</option>
+                <option value="production">Phần trăm BTP</option>
+                <option value="nhapLieuSanXuat">Năng suất sản xuất</option>
+                <option value="congTachMui">Năng xuất tách múi</option>
+              </select>
+            </div>
+            <div class="col-12 col-md-6 col-xl-2 d-flex gap-2">
+              <button id="applyReportFilters" type="submit" class="btn btn-primary flex-fill">Áp dụng</button>
+              <button id="exportReportBtn" type="button" class="btn btn-outline-success flex-fill">Xuất Excel</button>
+            </div>
+          </form>
+        </section>
+
+        <section id="autoReportSection" class="card border-0 shadow-sm mb-4" hidden>
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="mb-0 fw-bold">Báo cáo tự động</h5>
+              <span class="badge bg-primary-subtle text-primary">Admin / Dev</span>
+            </div>
+
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="autoReportFromDate">Từ ngày</label>
+                <input id="autoReportFromDate" type="date" class="form-control" />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="autoReportToDate">Đến ngày</label>
+                <input id="autoReportToDate" type="date" class="form-control" />
+              </div>
+
+              <div class="col-md-8">
+                <label class="form-label">Chọn nội dung gửi</label>
+                <div class="row g-2 report-toggle-grid">
+                  <div class="col-md-6">
+                    <label class="report-toggle-item" for="reportOptKpi">
+                      <input class="report-toggle-input" type="checkbox" value="kpi" id="reportOptKpi" checked />
+                      <span class="report-toggle-track"><span class="report-toggle-thumb"></span></span>
+                      <span class="report-toggle-label">KPI tổng quan</span>
+                    </label>
+                    <label class="report-toggle-item" for="reportOptTrend">
+                      <input class="report-toggle-input" type="checkbox" value="trend" id="reportOptTrend" checked />
+                      <span class="report-toggle-track"><span class="report-toggle-thumb"></span></span>
+                      <span class="report-toggle-label">Biểu đồ xu hướng</span>
+                    </label>
+                    <label class="report-toggle-item" for="reportOptBtpBreakdown">
+                      <input class="report-toggle-input" type="checkbox" value="btpBreakdown" id="reportOptBtpBreakdown" checked />
+                      <span class="report-toggle-track"><span class="report-toggle-thumb"></span></span>
+                      <span class="report-toggle-label">Theo loại BTP</span>
+                    </label>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="report-toggle-item" for="reportOptTeam">
+                      <input class="report-toggle-input" type="checkbox" value="team" id="reportOptTeam" checked />
+                      <span class="report-toggle-track"><span class="report-toggle-thumb"></span></span>
+                      <span class="report-toggle-label">Biểu đồ theo Tổ</span>
+                    </label>
+                    <label class="report-toggle-item" for="reportOptShift">
+                      <input class="report-toggle-input" type="checkbox" value="shift" id="reportOptShift" checked />
+                      <span class="report-toggle-track"><span class="report-toggle-thumb"></span></span>
+                      <span class="report-toggle-label">Biểu đồ theo Ca</span>
+                    </label>
+                    <label class="report-toggle-item" for="reportOptDailyTable">
+                      <input class="report-toggle-input" type="checkbox" value="dailyTable" id="reportOptDailyTable" checked />
+                      <span class="report-toggle-track"><span class="report-toggle-thumb"></span></span>
+                      <span class="report-toggle-label">Bảng chi tiết theo ngày</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <label class="form-label">Tài khoản gửi báo cáo</label>
+              <div class="d-flex flex-wrap gap-2 align-items-center">
+                <button id="googleSignInBtn" type="button" class="btn btn-outline-danger">Đăng nhập Google</button>
+                <button id="googleSignOutBtn" type="button" class="btn btn-outline-secondary" hidden>Đăng xuất</button>
+                <span id="googleLoginStatus" class="text-muted small">Chưa đăng nhập</span>
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <label class="form-label">Danh sách Gmail nhận báo cáo</label>
+              <div class="input-group">
+                <input id="reportRecipientInput" type="email" class="form-control" placeholder="example@gmail.com" />
+                <button id="addReportRecipientBtn" type="button" class="btn btn-outline-primary">Thêm</button>
+              </div>
+              <div id="reportRecipientList" class="d-flex flex-wrap gap-2 mt-3"></div>
+            </div>
+
+            <div class="row g-3 mt-2 align-items-end">
+              <div class="col-md-4">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="autoReportEnabled" />
+                  <label class="form-check-label" for="autoReportEnabled">Bật gửi tự động mỗi ngày</label>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="autoReportSendTime">Giờ gửi</label>
+                <input id="autoReportSendTime" type="time" class="form-control" value="18:00" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="autoReportOnlyHasData">Chỉ gửi nếu có dữ liệu</label>
+                <div class="form-check form-switch mt-2">
+                  <input class="form-check-input" type="checkbox" id="autoReportOnlyHasData" checked />
+                  <label class="form-check-label" for="autoReportOnlyHasData">Có dữ liệu trong ngày</label>
+                </div>
+              </div>
+            </div>
+
+            <div class="d-flex gap-2 mt-4 flex-wrap">
+              <button id="sendReportNowBtn" type="button" class="btn btn-primary">Gửi báo cáo ngay</button>
+              <button id="previewReportBtn" type="button" class="btn btn-outline-primary">Xem trước báo cáo</button>
+              <button id="saveAutoReportConfigBtn" type="button" class="btn btn-outline-success">Lưu cấu hình tự động</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="row g-3 mb-4 metrics-grid">
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="metric-card blue">
+              <div class="metric-label">Tổng BTP</div>
+              <div class="metric-value" id="totalBtp">0</div>
+            </div>
+          </div>
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="metric-card green">
+              <div class="metric-label">Năng suất TB</div>
+              <div class="metric-value" id="avgProductivity">0</div>
+            </div>
+          </div>
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="metric-card orange">
+              <div class="metric-label">Tổng thời gian</div>
+              <div class="metric-value" id="totalTime">0</div>
+            </div>
+          </div>
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="metric-card purple">
+              <div class="metric-label">Tổ / nhóm</div>
+              <div class="metric-value" id="activeGroups">0</div>
+            </div>
+          </div>
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="metric-card gray">
+              <div class="metric-label">Số dòng dữ liệu</div>
+              <div class="metric-value" id="totalRows">0</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="report-grid">
+          <div class="report-charts-row">
+            <article class="chart-card chart-large">
+              <div class="chart-header">
+                <h2>Trung bình / Tổng năng xuất theo Tổ (Năng xuất tách múi)</h2>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="trendChart"></canvas>
+              </div>
+            </article>
+
+            <article class="chart-card chart-card--donut">
+              <div class="chart-header">
+                <h2>Theo loại BTP (Phần trăm BTP)</h2>
+              </div>
+              <div class="chart-wrapper small-chart chart-wrapper--donut">
+                <canvas id="processChart"></canvas>
+              </div>
+            </article>
+
+            <article class="chart-card">
+              <div class="chart-header">
+                <h2>Chất lượng nguyên liệu theo kho</h2>
+              </div>
+              <div class="team-chart-scroll">
+                <div class="team-chart-inner">
+                  <canvas id="teamChart"></canvas>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <article class="chart-card chart-wide">
+            <div class="chart-header">
+              <h2>Năng xuất theo công đoạn</h2>
+            </div>
+            <div class="chart-wrapper small-chart">
+              <canvas id="shiftChart"></canvas>
+            </div>
+          </article>
+        </section>
+
+        <section class="table-card">
+          <div class="chart-header">
+            <h2>Chi tiết theo ngày</h2>
+          </div>
+          <div class="table-responsive">
+            <table class="table align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Ngày</th>
+                  <th>Tổng BTP</th>
+                  <th>Tổng thời gian</th>
+                  <th>Năng suất</th>
+                  <th>Số dòng</th>
+                </tr>
+              </thead>
+              <tbody id="dailyTableBody">
+                <tr>
+                  <td colspan="5" class="text-muted">Đang tải dữ liệu...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="reportPreviewModal" class="modal fade show" tabindex="-1" style="display:none; background:rgba(15,23,42,.45); position:fixed; inset:0; z-index:1055; overflow-y:auto;">
+      <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document" style="margin:24px auto; max-width:1100px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:16px; overflow:hidden;">
+          <div class="modal-header bg-success-subtle px-4 py-3">
+            <h5 class="modal-title fw-bold text-success-emphasis mb-0">Xem trước báo cáo</h5>
+            <button id="reportPreviewCloseBtn" type="button" class="btn-close" aria-label="Đóng"></button>
+          </div>
+          <div id="reportPreviewBody" class="modal-body p-0 bg-light"></div>
+          <div class="modal-footer justify-content-between px-4 py-3">
+            <button id="reportPreviewCloseFooterBtn" type="button" class="btn btn-outline-secondary">Đóng</button>
+            <button id="reportPreviewSendBtn" type="button" class="btn btn-primary">Gửi ngay từ bản xem trước</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script type="module" src="./js/report.js"></script>
+    <script type="module" src="./js/logout.js"></script>
+  </body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Đầu vào nguyên liệu - Chánh Thu</title>
+    <link rel="stylesheet" href="./css/traceability.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <a class="brand" href="./dashboard.html" aria-label="Về dashboard">
+        <img src="./images/Logo.png" alt="Chánh Thu" />
+        <span>
+          <strong>CHÁNH THU</strong>
+          <small>Truy xuất sản xuất</small>
+        </span>
+      </a>
+      <div class="connection" id="connectionStatus" aria-live="polite">Đang kết nối...</div>
+    </header>
+    <nav class="trace-nav" aria-label="Truy xuất">
+      <a href="./traceability.html" aria-current="page">Nhập hàng</a>
+      <a href="./traceability-stage.html">Xử lý công đoạn</a>
+      <a href="./traceability-dashboard.html">Tổng quan</a>
+    </nav>
+
+    <!-- Thông báo nổi, tự ẩn sau vài giây -->
+    <div id="toastRegion" class="toast-region" role="status" aria-live="polite"></div>
+
+    <main class="app-main">
+      <section class="screen-heading">
+        <p id="departmentLabel">Đang tải bộ phận...</p>
+        <h1>Đầu vào nguyên liệu</h1>
+        <span id="operatorLabel">-</span>
+      </section>
+
+      <!-- Hiện khi tài khoản không có quyền nhập liệu -->
+      <section id="noAccessPanel" class="notice notice--error is-hidden" role="alert">
+        <strong>Không có quyền nhập liệu</strong>
+        <span id="noAccessMessage">Tài khoản của bạn chưa được cấp quyền dùng trang này. Vui lòng liên hệ quản lý.</span>
+      </section>
+
+      <section id="createLotPanel" class="create-panel is-hidden" aria-labelledby="createLotTitle">
+        <div class="section-title">
+          <div>
+            <p>Đầu vào nguyên liệu</p>
+            <h2 id="createLotTitle">Tạo lô mới</h2>
+          </div>
+          <span class="stage-badge">Phân loại 1</span>
+        </div>
+
+        <form id="createLotForm" class="form-grid" novalidate>
+          <label class="field">
+            <span class="field-label">Mã lô <b class="req">*</b></span>
+            <input id="newLotCode" name="lotCode" type="text" autocomplete="off" autocapitalize="characters" maxlength="80" placeholder="XM-20260927-001" aria-describedby="newLotCodeError" />
+            <small class="field-hint">Chữ in hoa, số và dấu gạch ngang, tối thiểu 3 ký tự.</small>
+            <small id="newLotCodeError" class="field-error" role="alert"></small>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Ngày nhập hàng <b class="req">*</b></span>
+            <input id="newLotDate" name="receivedDate" type="date" aria-describedby="newLotDateError" />
+            <small id="newLotDateError" class="field-error" role="alert"></small>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Biển số xe <b class="req">*</b></span>
+            <input id="newLotPlate" name="vehiclePlate" type="text" autocomplete="off" autocapitalize="characters" maxlength="30" placeholder="51C-123.45" aria-describedby="newLotPlateError" />
+            <small id="newLotPlateError" class="field-error" role="alert"></small>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Loại hàng <b class="req">*</b></span>
+            <input id="newLotProduct" name="productType" type="text" autocomplete="off" maxlength="200" placeholder="Ví dụ: Xoài cát Chu" aria-describedby="newLotProductError" />
+            <small id="newLotProductError" class="field-error" role="alert"></small>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Vùng / Cửa khẩu nhập hàng <b class="req">*</b></span>
+            <input id="newLotOrigin" name="origin" type="text" autocomplete="off" maxlength="200" placeholder="Ví dụ: Đồng Tháp / Cửa khẩu Dinh Bà" aria-describedby="newLotOriginError" />
+            <small id="newLotOriginError" class="field-error" role="alert"></small>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Khối lượng đầu vào (kg) <b class="req">*</b></span>
+            <input id="newLotKg" name="initialKg" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00" aria-describedby="newLotKgError" />
+            <small id="newLotKgError" class="field-error" role="alert"></small>
+          </label>
+
+          <label class="field span-all">
+            <span class="field-label">Ghi chú lô đầu vào</span>
+            <input id="newLotNote" name="note" type="text" maxlength="500" placeholder="Tình trạng nguyên liệu, ghi chú khác" />
+          </label>
+
+          <div class="form-actions span-all">
+            <button id="resetFormBtn" class="ghost-action" type="button">Nhập lại</button>
+            <button id="createLotBtn" class="secondary-action" type="submit">
+              <span class="btn-spinner" aria-hidden="true"></span>
+              <span class="btn-label">Tạo lô và đưa vào Phân loại 1</span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section id="intakeListPanel" class="queue-panel is-hidden" aria-labelledby="intakeListTitle">
+        <div class="section-title">
+          <div>
+            <p>Dữ liệu</p>
+            <h2 id="intakeListTitle">Danh sách nhập hàng</h2>
+          </div>
+          <span id="intakeCount" class="count" title="Số lô đang hiển thị / tổng số lô đã tải">0</span>
+        </div>
+
+        <div class="list-toolbar">
+          <input id="searchInput" type="search" autocomplete="off" placeholder="Tìm mã lô, biển số, loại hàng, vùng..." aria-label="Tìm kiếm lô" />
+          <input id="dateFilter" type="date" aria-label="Lọc theo ngày nhập hàng" />
+          <button id="clearFilterBtn" class="ghost-action" type="button">Xóa lọc</button>
+          <button id="refreshBtn" class="ghost-action" type="button">Làm mới</button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="intake-table">
+            <thead>
+              <tr>
+                <th>STT</th>
+                <th>Mã lot</th>
+                <th>Ngày nhập hàng</th>
+                <th>Biển số xe</th>
+                <th>Loại hàng</th>
+                <th>Vùng / Cửa khẩu nhập hàng</th>
+                <th>Khối lượng (kg)</th>
+                <th id="actionsHeader" class="col-actions is-hidden">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="intakeRows"></tbody>
+          </table>
+        </div>
+        <div id="emptyState" class="empty-state is-hidden">
+          <strong id="emptyTitle">Chưa có lô nhập hàng nào</strong>
+          <span id="emptyHint">Các lô bạn tạo sẽ xuất hiện tại đây ngay lập tức.</span>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./js/traceabilityEntry.js"></script>
+  </body>
+</html>

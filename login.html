@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Đăng nhập - Production Data Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: '#f8fafc',
+                100: '#eef2ff',
+                500: '#3b82f6',
+                600: '#2563eb',
+                700: '#1d4ed8'
+              }
+            },
+            boxShadow: {
+              soft: '0 10px 30px rgba(15, 23, 42, 0.10)'
+            }
+          }
+        }
+      };
+    </script>
+    <link rel="stylesheet" href="./css/style.css" />
+    <link rel="stylesheet" href="./css/login.css" />
+  </head>
+  <body class="login-page">
+    <main class="w-full px-4 py-10">
+      <div class="mx-auto login-shell rounded-3xl overflow-hidden">
+        <div class="p-6 sm:p-8 md:p-10">
+          <div class="text-center mb-8">
+            <div class="brand-icon mx-auto mb-4 overflow-hidden">
+              <img src="./images/Logo.png" alt="Logo công ty" class="h-full w-full object-cover" />
+            </div>
+            <h1 class="text-2xl font-bold tracking-tight text-white">Đăng nhập hệ thống</h1>
+            <p class="mt-2 text-sm text-slate-300">Chỉ nhân viên được cấp tài khoản mới có thể truy cập.</p>
+          </div>
+
+          <form id="loginForm" novalidate class="space-y-5">
+            <div>
+              <label for="email" class="mb-2 block text-sm font-medium text-slate-200">Email</label>
+              <input id="email" name="email" type="email" class="login-input" placeholder="you@company.com" autocomplete="email" required />
+              <div class="mt-2 text-sm text-red-300" id="emailError"></div>
+            </div>
+
+            <div>
+              <label for="password" class="mb-2 block text-sm font-medium text-slate-200">Mật khẩu</label>
+              <div class="flex overflow-hidden rounded-xl border border-slate-400/40 bg-white/95 focus-within:ring-4 focus-within:ring-blue-500/15">
+                <input id="password" name="password" type="password" class="w-full border-0 bg-transparent px-3 py-3 text-slate-800 placeholder:text-slate-400 focus:outline-none" placeholder="••••••••" autocomplete="current-password" required />
+                <button class="border-l border-slate-200 bg-slate-100 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-200" type="button" id="togglePassword" aria-label="Hiện / Ẩn mật khẩu">Hiện</button>
+              </div>
+              <div class="mt-2 text-sm text-red-300" id="passwordError"></div>
+            </div>
+
+            <div class="flex items-center justify-between gap-4 text-sm">
+              <label for="rememberMe" class="inline-flex items-center gap-2 text-slate-200">
+                <input class="h-4 w-4 rounded border-slate-400 text-brand-600 focus:ring-brand-500" type="checkbox" id="rememberMe" />
+                <span>Nhớ đăng nhập</span>
+              </label>
+              <a href="#" id="forgotPasswordLink" class="text-blue-300 hover:text-blue-200">Quên mật khẩu?</a>
+            </div>
+
+            <button type="submit" class="btn-primary w-full">Đăng nhập</button>
+          </form>
+
+          <div id="messageBox" class="mt-5"></div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      if (window.location.protocol === 'file:') {
+        const form = document.getElementById('loginForm');
+        const messageBox = document.getElementById('messageBox');
+        form?.addEventListener('submit', (event) => {
+          event.preventDefault();
+          if (messageBox) {
+            messageBox.className = 'alert alert-warning mt-4';
+            messageBox.textContent = 'Không thể đăng nhập khi mở file trực tiếp. Hãy truy cập website HTTPS của hệ thống.';
+          }
+        });
+      }
+    </script>
+    <script type="module" src="./js/login.js"></script>
+  </body>
+</html>

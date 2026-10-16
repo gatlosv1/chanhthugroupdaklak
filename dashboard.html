@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard - Production Data Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: '#f8fafc',
+                100: '#eef2ff',
+                500: '#3b82f6',
+                600: '#2563eb',
+                700: '#1d4ed8'
+              }
+            },
+            boxShadow: {
+              soft: '0 10px 30px rgba(15, 23, 42, 0.10)'
+            }
+          }
+        }
+      };
+    </script>
+    <link rel="stylesheet" href="./css/style.css" />
+    <link rel="stylesheet" href="./css/dashboard.css" />
+  </head>
+  <body class="dashboard-page">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <h2 class="text-xl font-bold text-white">Production Data</h2>
+          <p class="mt-1 text-sm text-slate-300">Quản lý sản xuất</p>
+        </div>
+
+        <nav class="space-y-1.5">
+          <a class="sidebar-link active" href="./dashboard.html">Dashboard</a>
+          <a class="sidebar-link" href="./profile.html" data-page="profile">Profile</a>
+          <a class="sidebar-link" href="./label.html" data-page="label">In Nhãn</a>
+          <a class="sidebar-link" href="./production.html" data-page="production">Phần trăm BTP</a>
+          <a class="sidebar-link" href="./nhap-lieu-san-xuat.html" data-page="nhapLieuSanXuat">Năng suất sản xuất</a>
+          <a class="sidebar-link" href="./report.html" data-page="report">Báo cáo</a>
+          <a class="sidebar-link" href="./phieu-can-tay-nguyen-lieu.html" data-page="phieuCanTay">Phiếu cân tay nguyên liệu</a>
+          <a class="sidebar-link" href="./cong-tach-mui.html" data-page="congTachMui">Năng xuất tách múi</a>
+          <a class="sidebar-link" href="./traceability.html" data-page="traceability">Truy xuất xoài đông lạnh</a>
+          <a class="sidebar-link admin-only" id="manageUsersMenu" href="#">Quản lý User</a>
+          <a class="sidebar-link admin-only" href="./settings.html" data-page="settings">⚙ Quản lý danh mục</a>
+          <a class="sidebar-link admin-only" href="#">Import Excel</a>
+          <a class="sidebar-link admin-only" href="#">Export Excel</a>
+          <a class="sidebar-link" href="./dev-manager.html" data-page="devManager">Developer Manager</a>
+          <a class="sidebar-link" href="./history.html" data-page="history">Lịch sử thao tác</a>
+          <a class="sidebar-link" href="#" data-action="logout">Đăng xuất</a>
+        </nav>
+      </aside>
+
+      <main class="content-panel">
+        <header class="topbar">
+          <div>
+            <p class="page-subtitle">Xin chào</p>
+            <h1 class="page-title" id="dashboardGreeting">Dashboard</h1>
+          </div>
+          <div class="user-chip">
+            <div class="text-right">
+              <p class="mb-0 font-semibold text-slate-800" id="currentUserName">-</p>
+              <p class="mb-0 text-xs text-slate-500" id="currentUserEmail">-</p>
+            </div>
+            <div class="avatar-circle" id="avatarPreview">U</div>
+          </div>
+        </header>
+
+        <section class="grid gap-4 md:grid-cols-3 mb-5">
+          <div class="card stat-card">
+            <p class="mb-2 text-sm text-slate-500">Vai trò</p>
+            <h3 class="text-lg font-semibold text-slate-800" id="currentUserRole">Staff</h3>
+          </div>
+          <div class="card stat-card">
+            <p class="mb-2 text-sm text-slate-500">Phòng ban</p>
+            <h3 class="text-lg font-semibold text-slate-800" id="currentUserDepartment">-</h3>
+          </div>
+          <div class="card stat-card">
+            <p class="mb-2 text-sm text-slate-500">Trạng thái</p>
+            <h3 class="text-lg font-semibold text-emerald-600">Đã đăng nhập</h3>
+          </div>
+        </section>
+
+        <section class="grid gap-5 xl:grid-cols-[1.5fr_0.8fr]">
+          <div class="card rounded-2xl p-5">
+            <h2 class="text-xl font-semibold text-slate-800 mb-2">Tóm tắt công việc</h2>
+            <p class="text-slate-600 mb-5">Bạn có thể nhập dữ liệu sản xuất, chỉnh sửa hồ sơ và quản lý tài khoản theo vai trò của mình.</p>
+            <div class="grid gap-4 md:grid-cols-2">
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-page-access="production">
+                <h3 class="text-base font-semibold text-slate-800">Phần trăm BTP</h3>
+                <p class="mt-2 text-sm text-slate-600">Ghi nhận số lượng, lỗi và tiến độ sản xuất theo tỷ lệ BTP.</p>
+                <a class="btn-primary inline-flex mt-4 px-4 py-2 text-sm" href="./production.html">Chuyển sang Phần trăm BTP</a>
+              </div>
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-page-access="nhapLieuSanXuat">
+                <h3 class="text-base font-semibold text-slate-800">Năng suất sản xuất</h3>
+                <p class="mt-2 text-sm text-slate-600">Theo dõi BTP, thời gian và năng suất theo công đoạn.</p>
+                <a class="inline-flex mt-4 rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-600" href="./nhap-lieu-san-xuat.html">Mở Năng suất sản xuất</a>
+              </div>
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-page-access="report">
+                <h3 class="text-base font-semibold text-slate-800">Báo cáo</h3>
+                <p class="mt-2 text-sm text-slate-600">Theo dõi xu hướng, KPI và biểu đồ tổng quan vận hành.</p>
+                <a class="inline-flex mt-4 rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600" href="./report.html">Mở Báo cáo</a>
+              </div>
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-page-access="phieuCanTay">
+                <h3 class="text-base font-semibold text-slate-800">Phiếu cân tay nguyên liệu</h3>
+                <p class="mt-2 text-sm text-slate-600">Nhập và theo dõi số cân nguyên liệu theo từng lô, giúp kiểm tra nhanh tổng khối lượng và hao hụt.</p>
+                <a class="inline-flex mt-4 rounded-xl bg-amber-400 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-500" href="./phieu-can-tay-nguyen-lieu.html">Mở Phiếu cân tay nguyên liệu</a>
+              </div>
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-page-access="congTachMui">
+                <h3 class="text-base font-semibold text-slate-800">Năng xuất tách múi</h3>
+                <p class="mt-2 text-sm text-slate-600">Nhập và theo dõi sản lượng theo từng tổ và ca làm việc.</p>
+                <a class="inline-flex mt-4 rounded-xl bg-amber-400 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-500" href="./cong-tach-mui.html">Mở Năng xuất tách múi</a>
+              </div>
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-page-access="traceability">
+                <h3 class="text-base font-semibold text-slate-800">Truy xuất xoài đông lạnh</h3>
+                <p class="mt-2 text-sm text-slate-600">Quét lô, nhập công đoạn và theo dõi hàng chờ theo bộ phận.</p>
+                <a class="inline-flex mt-4 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700" href="./traceability.html">Mở nhập công đoạn</a>
+              </div>
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 md:col-span-2" data-page-access="labelTrang">
+                <h3 class="text-base font-semibold text-slate-800">In tem nhãn trắng</h3>
+                <p class="mt-2 text-sm text-slate-600">Tạo nhãn trắng, tùy chỉnh font, kích thước và in hoặc xuất PDF nhanh.</p>
+                <a class="inline-flex mt-4 rounded-xl bg-slate-700 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800" href="./label-trang.html">Mở In tem nhãn trắng</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="card rounded-2xl p-5">
+            <h2 class="text-xl font-semibold text-slate-800">Chi Tiết</h2>
+            <div id="adminActions" class="mt-4 space-y-2"></div>
+          </div>
+        </section>
+
+        <section class="admin-only mt-6">
+          <div class="card rounded-2xl p-5">
+            <div class="mb-4">
+              <h2 class="text-xl font-semibold text-slate-800">Tạo tài khoản người dùng</h2>
+            </div>
+
+            <form id="createUserForm" class="grid gap-4 md:grid-cols-2">
+              <div>
+                <label class="mb-2 block text-sm font-medium text-slate-700" for="createUserEmail">Email</label>
+                <input id="createUserEmail" type="email" class="form-control" required />
+              </div>
+              <div>
+                <label class="mb-2 block text-sm font-medium text-slate-700" for="createUserPassword">Mật khẩu</label>
+                <input id="createUserPassword" type="text" class="form-control" placeholder="Để trống để tự sinh mật khẩu" />
+              </div>
+              <div>
+                <label class="mb-2 block text-sm font-medium text-slate-700" for="createUserName">Tên hiển thị</label>
+                <input id="createUserName" type="text" class="form-control" />
+              </div>
+              <div>
+                <label class="mb-2 block text-sm font-medium text-slate-700" for="createUserRole">Vai trò</label>
+                <select id="createUserRole" class="form-select">
+                  <option value="staff">Staff</option>
+                  <option value="admin">Admin</option>
+                  <option value="dev">Dev</option>
+                </select>
+              </div>
+              <div class="md:col-span-2">
+                <label class="mb-2 block text-sm font-medium text-slate-700">Quyền chi tiết</label>
+                <div id="createPermissionList" class="flex flex-wrap gap-3">
+                  <label class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"><input type="checkbox" class="form-check-input permission-checkbox" value="view" checked /> <span>View</span></label>
+                  <label class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"><input type="checkbox" class="form-check-input permission-checkbox" value="add" checked /> <span>Add</span></label>
+                  <label class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"><input type="checkbox" class="form-check-input permission-checkbox" value="edit" /> <span>Edit</span></label>
+                  <label class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"><input type="checkbox" class="form-check-input permission-checkbox" value="delete" /> <span>Delete</span></label>
+                  <label class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"><input type="checkbox" class="form-check-input permission-checkbox" value="export" /> <span>Export</span></label>
+                  <label class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"><input type="checkbox" class="form-check-input permission-checkbox" value="import" /> <span>Import</span></label>
+                  <label class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"><input type="checkbox" class="form-check-input permission-checkbox" value="manageUsers" /> <span>Manage Users</span></label>
+                  <label class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"><input type="checkbox" class="form-check-input permission-checkbox" value="manageSettings" /> <span>Manage Settings</span></label>
+                  <label class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"><input type="checkbox" class="form-check-input permission-checkbox" value="viewAllHistory" /> <span>View All History</span></label>
+                  <label class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"><input type="checkbox" class="form-check-input permission-checkbox" value="maintenance" /> <span>Maintenance</span></label>
+                </div>
+              </div>
+              <div class="md:col-span-2">
+                <label class="mb-2 block text-sm font-medium text-slate-700">Quyền truy cập trang</label>
+                <div class="grid gap-3 md:grid-cols-3">
+                  <select id="createUserPermissionOne" class="form-select page-access-select">
+                    <option value="">-- Chưa phân quyền --</option>
+                    <option value="production">Phần trăm BTP</option>
+                    <option value="nhapLieuSanXuat">Năng suất sản xuất</option>
+                    <option value="report">Báo cáo</option>
+                    <option value="label">In nhãn</option>
+                    <option value="labelTrang">In tem nhãn trắng</option>
+                    <option value="phieuCanTay">Phiếu cân tay nguyên liệu</option>
+                    <option value="congTachMui">Năng xuất tách múi</option>
+                  </select>
+                  <select id="createUserPermissionTwo" class="form-select page-access-select">
+                    <option value="">-- Chưa phân quyền --</option>
+                    <option value="production">Phần trăm BTP</option>
+                    <option value="nhapLieuSanXuat">Năng suất sản xuất</option>
+                    <option value="report">Báo cáo</option>
+                    <option value="label">In nhãn</option>
+                    <option value="labelTrang">In tem nhãn trắng</option>
+                    <option value="phieuCanTay">Phiếu cân tay nguyên liệu</option>
+                    <option value="congTachMui">Năng xuất tách múi</option>
+                  </select>
+                  <select id="createUserPermissionThree" class="form-select page-access-select">
+                    <option value="">-- Chưa phân quyền --</option>
+                    <option value="production">Phần trăm BTP</option>
+                    <option value="nhapLieuSanXuat">Năng suất sản xuất</option>
+                    <option value="report">Báo cáo</option>
+                    <option value="label">In nhãn</option>
+                    <option value="labelTrang">In tem nhãn trắng</option>
+                    <option value="phieuCanTay">Phiếu cân tay nguyên liệu</option>
+                    <option value="congTachMui">Năng xuất tách múi</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label class="mb-2 block text-sm font-medium text-slate-700" for="createUserTeamId">Tổ được phân quyền</label>
+                <select id="createUserTeamId" class="form-select d-none"><option value="">-- Chọn tổ --</option></select>
+              </div>
+              <div class="md:col-span-2 flex flex-wrap items-center gap-3 pt-2">
+                <button type="submit" class="btn-primary px-5 py-3">Tạo tài khoản</button>
+                      <span id="createUserStatus" class="small text-muted"></span>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div id="createUserResult" class="alert alert-success mb-0 d-none"></div>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="row g-4 mt-1 admin-only" id="userManagementSection">
+          <div class="col-12">
+            <div class="card border-0 shadow-sm rounded-4">
+              <div class="card-body">
+                <div class="mb-3">
+                  <h2 class="h5 fw-semibold mb-0">Danh sách tài khoản</h2>
+                </div>
+
+                <div class="table-responsive">
+                  <table class="table align-middle mb-0 user-management-table">
+                    <thead>
+                      <tr>
+                        <th>Email</th>
+                        <th>Tên</th>
+                        <th>Mật khẩu</th>
+                        <th>Vai trò</th>
+                        <th>Quyền truy cập</th>
+                        <th>Tổ được phân quyền</th>
+                        <th>Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody id="userTableBody">
+                      <tr>
+                        <td colspan="7" class="text-muted">Đang tải...</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div id="userActionStatus" class="small text-muted mt-3"></div>
+
+                <div id="userEditPanel" class="border rounded-3 p-3 mt-3 bg-light d-none">
+                  <h3 class="h6 fw-semibold mb-3">Chỉnh sửa</h3>
+                  <form id="editUserForm" class="row g-3">
+                    <input id="editUserId" type="hidden" />
+                    <div class="col-md-4">
+                      <label class="form-label" for="editUserName">Tên hiển thị</label>
+                      <input id="editUserName" type="text" class="form-control" />
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label" for="editUserRole">Vai trò</label>
+                      <select id="editUserRole" class="form-select">
+                        <option value="staff">Staff</option>
+                        <option value="admin">Admin</option>
+                        <option value="dev">Dev</option>
+                      </select>
+                    </div>
+                    <div class="col-md-8">
+                      <label class="form-label">Quyền chi tiết</label>
+                      <div id="editPermissionList" class="d-flex flex-wrap gap-3">
+                        <label class="form-check"><input type="checkbox" class="form-check-input permission-checkbox" value="view" checked /> <span>View</span></label>
+                        <label class="form-check"><input type="checkbox" class="form-check-input permission-checkbox" value="add" checked /> <span>Add</span></label>
+                        <label class="form-check"><input type="checkbox" class="form-check-input permission-checkbox" value="edit" /> <span>Edit</span></label>
+                        <label class="form-check"><input type="checkbox" class="form-check-input permission-checkbox" value="delete" /> <span>Delete</span></label>
+                        <label class="form-check"><input type="checkbox" class="form-check-input permission-checkbox" value="export" /> <span>Export</span></label>
+                        <label class="form-check"><input type="checkbox" class="form-check-input permission-checkbox" value="import" /> <span>Import</span></label>
+                        <label class="form-check"><input type="checkbox" class="form-check-input permission-checkbox" value="manageUsers" /> <span>Manage Users</span></label>
+                        <label class="form-check"><input type="checkbox" class="form-check-input permission-checkbox" value="manageSettings" /> <span>Manage Settings</span></label>
+                        <label class="form-check"><input type="checkbox" class="form-check-input permission-checkbox" value="viewAllHistory" /> <span>View All History</span></label>
+                        <label class="form-check"><input type="checkbox" class="form-check-input permission-checkbox" value="maintenance" /> <span>Maintenance</span></label>
+                      </div>
+                    </div>
+                    <div class="col-md-8">
+                      <label class="form-label">Quyền truy cập trang</label>
+                      <div class="row g-2">
+                        <div class="col-md-4">
+                          <select id="editUserPermissionOne" class="form-select page-access-select">
+                            <option value="">-- Chưa phân quyền --</option>
+                            <option value="production">Phần trăm BTP</option>
+                            <option value="nhapLieuSanXuat">Năng suất sản xuất</option>
+                            <option value="report">Báo cáo</option>
+                            <option value="label">In nhãn</option>
+                            <option value="labelTrang">In tem nhãn trắng</option>
+                            <option value="phieuCanTay">Phiếu cân tay nguyên liệu</option>
+                            <option value="congTachMui">Năng xuất tách múi</option>
+                          </select>
+                        </div>
+                        <div class="col-md-4">
+                          <select id="editUserPermissionTwo" class="form-select page-access-select">
+                            <option value="">-- Chưa phân quyền --</option>
+                            <option value="production">Phần trăm BTP</option>
+                            <option value="nhapLieuSanXuat">Năng suất sản xuất</option>
+                            <option value="report">Báo cáo</option>
+                            <option value="label">In nhãn</option>
+                            <option value="labelTrang">In tem nhãn trắng</option>
+                            <option value="phieuCanTay">Phiếu cân tay nguyên liệu</option>
+                            <option value="congTachMui">Năng xuất tách múi</option>
+                          </select>
+                        </div>
+                        <div class="col-md-4">
+                          <select id="editUserPermissionThree" class="form-select page-access-select">
+                            <option value="">-- Chưa phân quyền --</option>
+                            <option value="production">Phần trăm BTP</option>
+                            <option value="nhapLieuSanXuat">Năng suất sản xuất</option>
+                            <option value="report">Báo cáo</option>
+                            <option value="label">In nhãn</option>
+                            <option value="labelTrang">In tem nhãn trắng</option>
+                            <option value="phieuCanTay">Phiếu cân tay nguyên liệu</option>
+                            <option value="congTachMui">Năng xuất tách múi</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label" for="editUserTeamId">Tổ được phân quyền</label>
+                      <select id="editUserTeamId" class="form-select d-none"><option value="">-- Chọn tổ --</option></select>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label" for="editUserPassword">Mật khẩu mới</label>
+                      <input id="editUserPassword" type="text" class="form-control" placeholder="Để trống nếu không đổi" />
+                    </div>
+                    <div class="col-12">
+                      <div class="d-flex gap-2 flex-wrap">
+                        <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+                        <button type="button" class="btn btn-outline-secondary" id="cancelEditBtn">Hủy</button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="./js/dashboard.js"></script>
+    <script type="module" src="./js/logout.js"></script>
+  </body>
+</html>

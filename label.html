@@ -1,0 +1,318 @@
+    <!DOCTYPE html>
+    <html lang="vi">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>In Nhãn TP - Quản Lý Sầu Riêng</title>
+
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+        <link rel="stylesheet" href="./css/style.css">
+        <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js'"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+
+    </head>
+    <body class="bg-gray-100">
+        <div class="max-w-7xl mx-auto p-6">
+            <div class="grid grid-cols-[44px_minmax(0,1fr)_auto] items-start gap-2">
+                <a href="./dashboard.html" title="Về Dashboard"
+                   class="w-11 h-11 bg-white hover:bg-gray-50 text-gray-700 rounded-xl shadow flex items-center justify-center">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <h1 class="text-2xl md:text-3xl font-bold text-center mb-2 text-gray-800">HỆ THỐNG IN NHÃN THÀNH PHẨM</h1>
+                <div class="flex gap-2">
+                    <button onclick="openDropdownAdmin()" title="Quản lý dữ liệu" data-admin-only
+                            class="w-11 h-11 bg-gray-700 hover:bg-gray-800 text-white rounded-xl flex items-center justify-center">
+                        <i class="fas fa-gear"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="firebaseStatus" class="text-center text-sm text-gray-600 mb-6">Đang kiểm tra kết nối Firebase...</div>
+
+            <!-- Tabs -->
+            <div class="flex border-b mb-8 bg-white rounded-t-2xl shadow">
+                <button onclick="switchTab(0)" id="tab0"
+                        class="tab-button flex-1 py-4 text-lg font-semibold border-b-4 border-blue-600 text-blue-600">NHẬP THÔNG TIN</button>
+                <button onclick="switchTab(1)" id="tab1"
+                        class="tab-button flex-1 py-4 text-lg font-semibold text-gray-500">BÁO CÁO SẢN LƯỢNG</button>
+            </div>
+
+            <!-- Tab 1: Nhập Thông Tin -->
+            <div id="content0">
+                <div class="grid grid-cols-12 gap-6">
+                    <div class="col-span-12 lg:col-span-7 bg-white rounded-2xl shadow p-8">
+                        <h2 class="text-2xl font-semibold mb-6">Nhập Thông Tin</h2>
+
+                        <div class="grid grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Mã BTP (Lot)</label>
+                                <div class="flex gap-2">
+                                    <input id="maBTP" type="text" class="flex-[2.5] px-4 py-3 border rounded-xl font-mono text-base" placeholder="D009MT15066-02-0K" oninput="handleLotInput()">
+                                    <button onclick="openLotModal()" class="flex-1 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium flex items-center justify-center gap-2 text-sm">
+                                        <i class="fas fa-history"></i> <span class="hidden sm:inline">Chọn Lot</span>
+                                    </button>
+                                </div>
+
+                                <div class="grid grid-cols-3 gap-4 mt-4">
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">Quy Cách</label>
+                                        <input id="quyCach" type="text" value="20kg" class="w-full px-4 py-3 border rounded-xl" oninput="updatePreview()">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">Nhà SX</label>
+                                        <select id="nhaSX" class="w-full px-4 py-3 border rounded-xl font-mono" onchange="handleNhaSXInput()"></select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">Loại Hàng</label>
+                                        <select id="loaiHang" class="w-full px-4 py-3 border rounded-xl" onchange="handleLotRuleChange()"></select>
+                                    </div>
+                                </div>
+
+                                <div class="mt-6">
+                                    <label class="block text-sm font-medium mb-1">VÙNG NGUYÊN LIỆU</label>
+                                    <select id="vungNguyenLieu" class="w-full px-4 py-3 border rounded-xl" onchange="handleRegionChange()"></select>
+
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium mb-1">SKU</label>
+                                <input id="sku" type="text" class="w-full px-4 py-3 border rounded-xl font-mono text-base" placeholder="TP101020203.01.001" oninput="updatePreview()">
+
+                                <label class="block text-sm font-medium mb-1 mt-4">Tên Thành Phẩm</label>
+                                <div class="flex items-center gap-2">
+                                    <input id="tenTP" type="text" class="flex-1 min-w-0 px-4 py-3 border rounded-xl" placeholder="TP CẤP ĐÔNG SẦU RIÊNG..." oninput="updatePreview()">
+                                    <button onclick="openProductModal()" class="shrink-0 px-3 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold whitespace-nowrap">
+                                        <i class="fas fa-boxes"></i> DS TP
+                                    </button>
+                                </div>
+
+                                <label class="block text-sm font-medium mb-1 mt-4">Tổ/Nhóm</label>
+                                <select id="toSanXuat" class="w-full px-4 py-3 border rounded-xl" onchange="updatePreview()"></select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-4 gap-4 mt-6">
+                            <div><label class="block text-sm font-medium mb-1">STT in đầu</label><input id="sttDau" type="number" value="1" min="1" class="w-full px-4 py-3 border rounded-xl" oninput="updateSttCuoi()"></div>
+                            <div><label class="block text-sm font-medium mb-1">Số lượng tem</label><input id="soLuongTem" type="number" value="1" min="1" class="w-full px-4 py-3 border rounded-xl font-semibold" oninput="updateSttCuoi()"></div>
+                            <div><label class="block text-sm font-medium mb-1">STT in cuối</label><input id="sttCuoi" type="number" value="1" class="w-full px-4 py-3 border rounded-xl bg-gray-50" readonly></div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Ngày SX</label>
+                                <input id="ngaySX" type="date" class="w-full px-4 py-3 border rounded-xl" onchange="updatePreview()">
+                            </div>
+                        </div>
+
+                        <div class="mt-6">
+                            <label class="block text-sm font-medium mb-1">Ngày ĐG </label>
+                            <input id="ngayDG" type="date" class="w-full px-4 py-3 border rounded-xl" oninput="handleNgayDongGoiInput()" onchange="handleNgayDongGoiInput()">
+                        </div>
+                    </div>
+
+                    <!-- Preview -->
+                    <div class="col-span-12 lg:col-span-5 space-y-6">
+                        <div class="bg-white rounded-2xl shadow p-6">
+                            <h2 class="text-xl font-semibold mb-4">Xem Trước Nhãn (90mm × 60mm)</h2>
+                            <div class="flex justify-center bg-gray-50 p-6 rounded-xl">
+                                <div id="previewLabel" class="label-preview"></div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div class="flex gap-4">
+                                <button onclick="openProductModal()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-xl font-medium">
+                                    <i class="fas fa-search"></i> Mở danh sách Thành Phẩm
+                                </button>
+                                <button onclick="resetSTT()" data-admin-only class="flex-1 bg-red-600 hover:bg-red-700 text-white py-4 rounded-xl font-medium">
+                                    <i class="fas fa-undo"></i> Reset STT
+                                </button>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <button onclick="printLabels(false)"
+                                        class="bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-2xl text-xl font-semibold flex items-center justify-center gap-3">
+                                    <i class="fas fa-print"></i> IN NHÃN MỚI
+                                </button>
+                                <button onclick="printLabels(true)"
+                                        class="bg-orange-600 hover:bg-orange-700 text-white py-5 rounded-2xl text-xl font-semibold flex items-center justify-center gap-3">
+                                    <i class="fas fa-redo"></i> IN LẠI
+                                </button>
+                                <button onclick="downloadPdfLabels()"
+                                        class="bg-emerald-700 hover:bg-emerald-800 text-white py-5 rounded-2xl text-xl font-semibold flex items-center justify-center gap-3">
+                                    <i class="fas fa-file-pdf"></i> TẢI PDF
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: Báo Cáo -->
+            <div id="content1" class="hidden">
+                <div class="report-card mb-8">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <div class="text-sm opacity-75">BÁO CÁO SẢN LƯỢNG IN</div>
+                            <div id="totalTem" class="text-6xl font-bold mt-1">0</div>
+                            <div class="text-sm opacity-75">TEM ĐẠT</div>
+                        </div>
+                        <div class="text-right">
+                            <div id="temHong" class="text-4xl font-bold text-red-400">0</div>
+                            <div class="text-sm opacity-75">TEM HỒNG</div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-8">
+                        <div>
+                            <div id="lastSTT" class="text-5xl font-bold text-emerald-400">0</div>
+                            <div class="text-sm opacity-75">STT CUỐI</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm opacity-75">CẬP NHẬT LẦN CUỐI</div>
+                            <div id="lastUpdate" class="font-mono text-lg">Chưa có dữ liệu</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold">Lịch sử in nhãn</h3>
+                        <div class="flex gap-3">
+                            <button onclick="toggleSelectAll()" id="selectAllBtn"
+                                    class="bg-gray-600 hover:bg-gray-700 text-white px-5 py-3 rounded-xl flex items-center gap-2 text-sm">
+                                <i class="fas fa-check-square"></i> Chọn tất cả
+                            </button>
+                            <button onclick="reprintFromHistory()"
+                                    class="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-xl flex items-center gap-2">
+                                <i class="fas fa-redo"></i> In lại tem đã chọn
+                            </button>
+                            <button onclick="deleteSelectedHistory()" data-admin-only
+                                    class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl flex items-center gap-2">
+                                <i class="fas fa-trash"></i> Xóa đã chọn
+                            </button>
+                            <button onclick="exportReportExcel()"
+                                    class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl flex items-center gap-2">
+                                <i class="fas fa-file-excel"></i> Tạo Excel Báo Cáo
+                            </button>
+                        </div>
+                    </div>
+                    <div class="max-h-[500px] overflow-auto">
+                        <table id="historyTable" class="w-full text-sm"></table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Quản lý danh mục -->
+        <div id="dropdownAdminModal" class="modal" data-admin-only>
+            <div class="modal-content modal-content-wide product-modal-content">
+                <div class="p-6 border-b flex justify-between items-center bg-gray-50">
+                    <div>
+                        <h3 class="text-xl font-bold">Quản lý dữ liệu</h3>
+                        <p class="text-sm text-gray-500 mt-1">Quản lý thành phẩm và item trong các ô chọn</p>
+                    </div>
+                    <button onclick="closeDropdownAdmin()" title="Đóng" class="w-10 h-10 text-2xl hover:text-red-600">&times;</button>
+                </div>
+                <div class="flex-1 min-h-0 overflow-auto p-6 space-y-6">
+                    <section class="border rounded-xl overflow-hidden bg-white">
+                        <div class="px-4 py-3 bg-gray-100 flex flex-wrap items-center justify-between gap-3">
+                            <h4 class="font-bold">Thành phẩm</h4>
+                            <label class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm">
+                                <i class="fas fa-upload"></i> Import Excel
+                                <input type="file" id="excelFile" accept=".xlsx,.xls" class="hidden" onchange="importExcel(this)">
+                            </label>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-2 p-3 bg-emerald-50/40 border-b">
+                            <input id="addStt" type="number" min="1" placeholder="STT tự động" readonly class="md:col-span-2 px-3 py-2 border rounded-lg bg-gray-100">
+                            <input id="addSku" type="text" placeholder="Mã SKU" class="md:col-span-3 px-3 py-2 border rounded-lg font-mono">
+                            <input id="addTenTP" type="text" placeholder="Tên TP" class="md:col-span-3 px-3 py-2 border rounded-lg">
+                            <select id="addLoai" class="md:col-span-2 px-3 py-2 border rounded-lg">
+                                <option value="">Loại (tự nhận)</option>
+                                <option value="Đô">Đô</option>
+                                <option value="Ri">Ri</option>
+                            </select>
+                            <button onclick="addThanhPhamManual()" class="md:col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white min-h-10 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
+                                <i class="fas fa-plus"></i> Thêm
+                            </button>
+                        </div>
+                        <div class="p-3 border-b">
+                            <input id="adminProductSearch" type="text" placeholder="Tìm mã SP hoặc tên..." class="w-full px-4 py-2 border rounded-lg" oninput="filterAdminProductGrid()">
+                        </div>
+                        <div class="max-h-80 overflow-auto">
+                            <table id="adminProductGrid" class="w-full text-sm">
+                                <thead class="bg-gray-50 sticky top-0">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left">STT</th>
+                                        <th class="px-4 py-3 text-left">Mã SP</th>
+                                        <th class="px-4 py-3 text-left">Tên TP</th>
+                                        <th class="px-4 py-3 text-center">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminProductBody"></tbody>
+                            </table>
+                        </div>
+                    </section>
+                    <div id="dropdownAdminGroups" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Lịch sử -->
+        <div id="lotModal" class="modal">
+            <div class="modal-content">
+                <div class="p-6 border-b flex justify-between items-center bg-gray-50">
+                    <h3 class="text-xl font-bold">📋 Chọn Mã BTP từ Lịch sử Nhập</h3>
+                    <span onclick="closeLotModal()" class="text-3xl cursor-pointer hover:text-red-600">&times;</span>
+                </div>
+                <div class="p-4">
+                    <input id="searchLot" type="text" placeholder="Tìm theo mã lot..."
+                        class="w-full px-4 py-3 border rounded-xl mb-3" onkeyup="filterLotList()">
+
+                    <div class="flex gap-2 mb-4">
+                        <input id="searchDate" type="date"
+                            class="flex-1 px-4 py-3 border rounded-xl"
+                            onchange="filterLotList()">
+                        <button onclick="clearDateFilter()"
+                                class="px-6 bg-gray-200 hover:bg-gray-300 rounded-xl text-sm font-medium whitespace-nowrap">
+                            Xóa ngày
+                        </button>
+                    </div>
+
+                    <div id="lotList" class="max-h-[500px] overflow-auto text-sm"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Danh sách Thành Phẩm -->
+        <div id="productModal" class="modal">
+            <div class="modal-content modal-content-wide product-modal-content">
+                <div class="p-6 border-b flex flex-wrap justify-between items-center gap-3 bg-gray-50">
+                    <h3 class="text-xl font-bold">📦 Danh sách Thành Phẩm</h3>
+                    <button onclick="closeProductModal()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-xl text-sm font-medium">
+                        Đóng
+                    </button>
+                </div>
+
+                <div class="p-4 border-b">
+                    <input id="searchInput" type="text" placeholder="Tìm mã SP hoặc tên..." class="w-full px-4 py-3 border rounded-xl" onkeyup="filterGrid()">
+                </div>
+
+                <div class="product-table-wrap">
+                    <table id="dataGrid" class="w-full text-sm">
+                        <thead class="bg-gray-50 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-3 text-left">STT</th>
+                                <th class="px-4 py-3 text-left">Mã SP</th>
+                                <th class="px-4 py-3 text-left">Tên TP</th>
+                            </tr>
+                        </thead>
+                        <tbody id="gridBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <script type="module" src="./js/label.js"></script>
+        <script type="module" src="./js/logout.js"></script>
+    </body>
+    </html>

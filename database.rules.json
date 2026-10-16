@@ -1,0 +1,19 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "logs": {
+      ".read": "auth != null && auth.token.admin == true",
+      "$date": {
+        ".read": "auth != null && (auth.token.admin == true || (query.orderByChild == 'u' && query.equalTo == auth.uid))",
+        ".write": "auth != null && auth.token.admin == true",
+        ".indexOn": ["t", "u"],
+        "$logId": {
+          ".read": "auth != null && (auth.token.admin == true || data.child('u').val() == auth.uid)",
+          ".write": "auth != null && ((!data.exists() && newData.child('u').val() == auth.uid) || (auth.token.admin == true && newData.exists()))",
+          ".validate": "newData.hasChildren(['t', 'u', 'a', 'p', 'd']) && newData.child('t').isNumber() && newData.child('t').val() > 0 && newData.child('u').isString() && newData.child('u').val().length <= 128 && newData.child('n').isString() && newData.child('n').val().length <= 80 && newData.child('a').isString() && newData.child('a').val().matches(/^(add|edit|delete|login|logout|export|import|save|load)$/) && newData.child('p').isString() && newData.child('p').val().matches(/^(congTachMui|production|nhapLieuSanXuat|settings|auth|dashboard|profile|history|label)$/) && newData.child('d').isString() && newData.child('d').val().length <= 120"
+        }
+      }
+    }
+  }
+}
