@@ -15,7 +15,10 @@
           <small>Truy xuất sản xuất</small>
         </span>
       </a>
-      <div class="connection" id="connectionStatus" aria-live="polite">Đang kết nối...</div>
+      <div class="header-actions">
+        <div class="connection" id="connectionStatus" aria-live="polite">Đang kết nối...</div>
+        <a class="exit-link" href="./dashboard.html">←</a>
+      </div>
     </header>
     <nav class="trace-nav" aria-label="Truy xuất">
       <a href="./traceability.html" aria-current="page">Nhập hàng</a>
@@ -128,6 +131,8 @@
                 <th>Loại hàng</th>
                 <th>Vùng / Cửa khẩu nhập hàng</th>
                 <th>Khối lượng (kg)</th>
+                <th title="Khối lượng còn lại trong lô (chưa tách ra, chưa loại bỏ)">Tồn (kg)</th>
+                <th title="Khối lượng đã rời khỏi lô: tách lô con, loại bỏ, hao hụt">Đã xuất (kg)</th>
                 <th id="actionsHeader" class="col-actions is-hidden">Thao tác</th>
               </tr>
             </thead>

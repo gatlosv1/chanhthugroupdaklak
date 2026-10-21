@@ -178,6 +178,22 @@ function formatKg(value) {
     : '-';
 }
 
+/** Như formatKg nhưng hiện 0 thay vì "-" (dùng cho cột tồn / đã xuất). */
+function formatKgOrZero(value) {
+  return Number(value) > 0 ? formatKg(value) : '0';
+}
+
+/** Tồn = khối lượng còn trong lô; đã xuất = khối lượng ban đầu trừ phần còn lại. */
+function getLotBalance(lot) {
+  const initial = Number(lot.intake?.initialKg) || 0;
+  const hasCurrent = lot.currentKg !== undefined && lot.currentKg !== null && Number.isFinite(Number(lot.currentKg));
+  const remaining = hasCurrent ? Math.min(Math.max(Number(lot.currentKg), 0), initial) : initial;
+  return {
+    remaining: Math.round(remaining * 1000) / 1000,
+    exported: Math.round((initial - remaining) * 1000) / 1000
+  };
+}
+
 /** Bỏ dấu + chữ thường để tìm kiếm tiếng Việt không phân biệt dấu. */
 function normalizeText(value) {
   return String(value || '')
@@ -417,6 +433,7 @@ function renderList() {
   const fragment = document.createDocumentFragment();
   lots.forEach((lot, index) => {
     const intake = lot.intake || {};
+    const balance = getLotBalance(lot);
     const row = document.createElement('tr');
     [
       [index + 1],
@@ -425,7 +442,9 @@ function renderList() {
       [intake.vehiclePlate || '-'],
       [intake.productType || '-'],
       [intake.origin || '-'],
-      [formatKg(intake.initialKg), 'num']
+      [formatKg(intake.initialKg), 'num'],
+      [formatKgOrZero(balance.remaining), 'num'],
+      [formatKgOrZero(balance.exported), 'num']
     ].forEach(([text, className]) => {
       const cell = document.createElement('td');
       cell.textContent = text;

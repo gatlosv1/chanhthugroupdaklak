@@ -39,6 +39,9 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .brand small { color: var(--muted); font-size: 12px; }
 .connection { color: var(--green-dark); font-size: 13px; font-weight: 700; }
 .connection--offline { color: var(--amber); }
+.header-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
+.exit-link { display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; color: var(--green-dark); background: white; border: 1px solid var(--green); border-radius: 6px; font-weight: 700; font-size: 14px; text-decoration: none; white-space: nowrap; }
+.exit-link:hover { color: white; background: var(--green); }
 
 .app-main { width: min(100%, 960px); margin: 0 auto; padding: 16px; }
 .screen-heading { padding: 12px 0 18px; }
