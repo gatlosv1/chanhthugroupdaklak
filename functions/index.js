@@ -410,19 +410,26 @@ exports.deleteIncomingLot = functions.region('asia-southeast1').https.onCall(asy
   if (!lotSnapshot.exists) {
     throw new functions.https.HttpsError('not-found', 'Không tìm thấy lô cần xoá (có thể đã bị xoá).');
   }
-  // Lô đã đi qua công đoạn khác hoặc đã sinh lô con thì giữ lại để không mất dữ liệu truy xuất.
+  // Lô đã đi qua công đoạn khác hoặc đã sinh lô con chỉ xoá khi người dùng đã xác nhận (force).
   const lotData = lotSnapshot.data() || {};
   const hasProcessing = eventsSnapshot.docs.some((doc) => doc.data().eventType !== 'LOT_CREATED')
-    || (lotData.history || []).some((entry) => entry.action !== 'CREATE');
-  if (hasProcessing || !childrenSnapshot.empty) {
-    throw new functions.https.HttpsError('failed-precondition', 'Lô đã được xử lý ở công đoạn sau nên không thể xoá.');
+    || (lotData.history || []).some((entry) => entry.action !== 'CREATE' && entry.action !== 'SPLIT_FROM_PARENT')
+    || !childrenSnapshot.empty;
+  if (hasProcessing && data?.force !== true) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Dữ liệu này đã được đưa đi phân loại. Bạn có chắc chắn muốn xóa?',
+      { reason: 'LOT_PROCESSED' }
+    );
   }
 
   const batch = db.batch();
   eventsSnapshot.docs.forEach((doc) => batch.delete(doc.ref));
   batch.delete(lotRef);
   await batch.commit();
-  functions.logger.info('Incoming lot deleted', { lotId, lotCode: lotSnapshot.data()?.lotCode, by: context.auth.uid });
+  functions.logger.info('Incoming lot deleted', {
+    lotId, lotCode: lotSnapshot.data()?.lotCode, processed: hasProcessing, by: context.auth.uid
+  });
 
   return { lotId, lotCode: lotSnapshot.data()?.lotCode || '' };
 });

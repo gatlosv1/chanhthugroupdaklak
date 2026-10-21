@@ -4,6 +4,7 @@ import { ensureUserDocument } from './userService.js';
 import { getUserProfile } from './firestore.js';
 import { requirePageAccess } from './pageAccess.js';
 import { resolveInitialRole, isPrivilegedRole } from './roleUtils.js';
+import { stageName } from './traceability/workflow.js';
 import {
   collection,
   enableIndexedDbPersistence,
@@ -56,7 +57,12 @@ const elements = {
   emptyState: $('emptyState'),
   emptyTitle: $('emptyTitle'),
   emptyHint: $('emptyHint'),
-  actionsHeader: $('actionsHeader')
+  actionsHeader: $('actionsHeader'),
+  generatedPanel: $('generatedPanel'),
+  generatedHead: $('generatedHead'),
+  generatedRows: $('generatedRows'),
+  generatedCount: $('generatedCount'),
+  generatedEmpty: $('generatedEmpty')
 };
 
 const fields = {
@@ -73,8 +79,71 @@ const state = {
   lots: [],
   canDelete: false,
   stopListening: null,
-  submitting: false
+  submitting: false,
+  sort: { key: 'createdAt', dir: 'desc' }
 };
+
+const STATUS_LABELS = {
+  waiting: 'Đang chờ',
+  completed: 'Hoàn thành',
+  rejected: 'Loại bỏ'
+};
+
+function createdAtMillis(lot) {
+  const value = lot.createdAt;
+  if (typeof value?.toMillis === 'function') return value.toMillis();
+  return Number.isFinite(value?.seconds) ? value.seconds * 1000 : 0;
+}
+
+function formatDateTime(millis) {
+  if (!millis) return '-';
+  const date = new Date(millis);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function parentLotCode(lot) {
+  const split = (lot.history || []).find((entry) => entry.action === 'SPLIT_FROM_PARENT');
+  return split?.kgData?.parentLotCode || '';
+}
+
+// Cột của bảng dữ liệu tự động: value dùng để sắp xếp, text dùng để hiển thị.
+const GENERATED_COLUMNS = [
+  { key: 'lotCode', label: 'Mã lot', value: (lot) => lot.lotCode || lot.id, text: (lot) => lot.lotCode || lot.id },
+  { key: 'parent', label: 'Lô gốc', value: parentLotCode, text: (lot) => parentLotCode(lot) || '-' },
+  {
+    key: 'stage',
+    label: 'Công đoạn',
+    value: (lot) => stageName(lot.currentStage || lot.pendingStageId || lot.lastStageId),
+    text: (lot) => stageName(lot.currentStage || lot.pendingStageId || lot.lastStageId)
+  },
+  {
+    key: 'status',
+    label: 'Trạng thái',
+    value: (lot) => STATUS_LABELS[lot.status] || lot.status || '',
+    text: (lot) => STATUS_LABELS[lot.status] || lot.status || '-'
+  },
+  { key: 'receivedDate', label: 'Ngày nhập hàng', value: (lot) => lot.intake?.receivedDate || '', text: (lot) => formatDate(lot.intake?.receivedDate) },
+  { key: 'vehiclePlate', label: 'Biển số xe', value: (lot) => lot.intake?.vehiclePlate || '', text: (lot) => lot.intake?.vehiclePlate || '-' },
+  { key: 'productType', label: 'Loại hàng', value: (lot) => lot.intake?.productType || '', text: (lot) => lot.intake?.productType || '-' },
+  { key: 'origin', label: 'Vùng / Cửa khẩu nhập hàng', value: (lot) => lot.intake?.origin || '', text: (lot) => lot.intake?.origin || '-' },
+  { key: 'initialKg', label: 'KL ban đầu (kg)', numeric: true, value: (lot) => Number(lot.intake?.initialKg) || 0, text: (lot) => formatKg(lot.intake?.initialKg) },
+  { key: 'currentKg', label: 'KL hiện tại (kg)', numeric: true, value: (lot) => Number(lot.currentKg) || 0, text: (lot) => formatKg(lot.currentKg) },
+  { key: 'createdAt', label: 'Thời gian tạo', value: createdAtMillis, text: (lot) => formatDateTime(createdAtMillis(lot)) }
+];
+
+/** Lô nhập tay: không có lô cha. Lô tạo tự động từ công đoạn luôn có parentLotIds. */
+function isGeneratedLot(lot) {
+  return Array.isArray(lot.parentLotIds) && lot.parentLotIds.length > 0;
+}
+
+/** Lô đã đi qua công đoạn sau Phân loại 1 hoặc đã tách ra lô con. */
+function isProcessedLot(lot) {
+  if (Number(lot.childCount) > 0) return true;
+  if (!isGeneratedLot(lot) && lot.currentStage && lot.currentStage !== INTAKE_STAGE_ID) return true;
+  if (lot.status && lot.status !== 'waiting') return true;
+  return (lot.history || []).some((entry) => entry.action !== 'CREATE' && entry.action !== 'SPLIT_FROM_PARENT');
+}
 
 /* ------------------------------------------------------------------ */
 /* Tiện ích                                                            */
@@ -303,23 +372,36 @@ async function handleSubmit(event) {
 /* Danh sách lô nhập                                                   */
 /* ------------------------------------------------------------------ */
 
-function getFilteredLots() {
+function matchesFilters(lot) {
   const keyword = normalizeText(elements.search.value.trim());
   const date = elements.dateFilter.value;
-  return state.lots.filter((lot) => {
-    const intake = lot.intake || {};
-    if (date && intake.receivedDate !== date) return false;
-    if (!keyword) return true;
-    const haystack = normalizeText([lot.lotCode, intake.vehiclePlate, intake.productType, intake.origin].join(' '));
-    return haystack.includes(keyword);
-  });
+  const intake = lot.intake || {};
+  if (date && intake.receivedDate !== date) return false;
+  if (!keyword) return true;
+  const haystack = normalizeText([lot.lotCode, intake.vehiclePlate, intake.productType, intake.origin].join(' '));
+  return haystack.includes(keyword);
+}
+
+function createDeleteCell(lot) {
+  const cell = document.createElement('td');
+  cell.className = 'col-actions';
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'danger-action';
+  button.textContent = 'Xoá';
+  button.setAttribute('aria-label', `Xoá lô ${lot.lotCode || lot.id}`);
+  button.addEventListener('click', () => handleDelete(lot, button));
+  cell.append(button);
+  return cell;
 }
 
 function renderList() {
-  const lots = getFilteredLots();
+  const manualLots = state.lots.filter((lot) => !isGeneratedLot(lot));
+  const lots = manualLots.filter(matchesFilters);
   const hasFilter = Boolean(elements.search.value.trim() || elements.dateFilter.value);
-  elements.count.textContent = hasFilter ? `${lots.length}/${state.lots.length}` : String(state.lots.length);
+  elements.count.textContent = hasFilter ? `${lots.length}/${manualLots.length}` : String(manualLots.length);
   elements.rows.replaceChildren();
+  renderGeneratedList(hasFilter);
 
   const isEmpty = lots.length === 0;
   setHidden(elements.emptyState, !isEmpty);
@@ -328,7 +410,7 @@ function renderList() {
     elements.emptyTitle.textContent = hasFilter ? 'Không có lô phù hợp' : 'Chưa có lô nhập hàng nào';
     elements.emptyHint.textContent = hasFilter
       ? 'Thử đổi từ khóa hoặc bấm "Xóa lọc".'
-      : 'Các lô bạn tạo sẽ xuất hiện tại đây ngay lập tức.';
+      : 'Các lô nhập tay sẽ xuất hiện tại đây ngay lập tức.';
     return;
   }
 
@@ -350,36 +432,116 @@ function renderList() {
       if (className) cell.className = className;
       row.append(cell);
     });
-    if (state.canDelete) {
-      const cell = document.createElement('td');
-      cell.className = 'col-actions';
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'danger-action';
-      button.textContent = 'Xoá';
-      button.setAttribute('aria-label', `Xoá lô ${lot.lotCode || lot.id}`);
-      button.addEventListener('click', () => handleDelete(lot, button));
-      cell.append(button);
-      row.append(cell);
-    }
+    if (state.canDelete) row.append(createDeleteCell(lot));
     fragment.append(row);
   });
   elements.rows.append(fragment);
 }
 
+function compareValues(a, b) {
+  if (typeof a === 'number' && typeof b === 'number') return a - b;
+  return String(a).localeCompare(String(b), 'vi', { numeric: true, sensitivity: 'base' });
+}
+
+function renderGeneratedHead() {
+  const cells = [Object.assign(document.createElement('th'), { textContent: 'STT' })];
+  GENERATED_COLUMNS.forEach((column) => {
+    const active = state.sort.key === column.key;
+    const th = document.createElement('th');
+    th.setAttribute('aria-sort', active ? (state.sort.dir === 'asc' ? 'ascending' : 'descending') : 'none');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `sort-btn${active ? ' is-active' : ''}`;
+    button.textContent = column.label;
+    const arrow = document.createElement('span');
+    arrow.className = 'sort-arrow';
+    arrow.setAttribute('aria-hidden', 'true');
+    arrow.textContent = active ? (state.sort.dir === 'asc' ? '▲' : '▼') : '↕';
+    button.append(arrow);
+    button.addEventListener('click', () => {
+      state.sort = {
+        key: column.key,
+        dir: active && state.sort.dir === 'asc' ? 'desc' : 'asc'
+      };
+      renderList();
+    });
+    th.append(button);
+    cells.push(th);
+  });
+  if (state.canDelete) {
+    cells.push(Object.assign(document.createElement('th'), { textContent: 'Thao tác', className: 'col-actions' }));
+  }
+  elements.generatedHead.replaceChildren(...cells);
+}
+
+/** Bảng "cơ sở dữ liệu" chỉ-đọc cho các lô phát sinh tự động từ công đoạn. */
+function renderGeneratedList(hasFilter) {
+  const generatedLots = state.lots.filter(isGeneratedLot);
+  const lots = generatedLots.filter(matchesFilters);
+  elements.generatedCount.textContent = hasFilter ? `${lots.length}/${generatedLots.length}` : String(generatedLots.length);
+  renderGeneratedHead();
+  elements.generatedRows.replaceChildren();
+
+  const isEmpty = lots.length === 0;
+  setHidden(elements.generatedEmpty, !isEmpty);
+  elements.generatedRows.closest('.table-wrap').classList.toggle('is-hidden', isEmpty);
+  if (isEmpty) return;
+
+  const column = GENERATED_COLUMNS.find((item) => item.key === state.sort.key) || GENERATED_COLUMNS[0];
+  const direction = state.sort.dir === 'asc' ? 1 : -1;
+  const sorted = [...lots].sort((a, b) => direction * compareValues(column.value(a), column.value(b)));
+
+  const fragment = document.createDocumentFragment();
+  sorted.forEach((lot, index) => {
+    const row = document.createElement('tr');
+    const first = document.createElement('td');
+    first.textContent = index + 1;
+    row.append(first);
+    GENERATED_COLUMNS.forEach((item) => {
+      const cell = document.createElement('td');
+      cell.textContent = item.text(lot);
+      if (item.numeric) cell.className = 'num';
+      row.append(cell);
+    });
+    if (state.canDelete) row.append(createDeleteCell(lot));
+    fragment.append(row);
+  });
+  elements.generatedRows.append(fragment);
+}
+
+const PROCESSED_CONFIRM = 'Dữ liệu này đã được đưa đi phân loại. Bạn có chắc chắn muốn xóa?';
+
 /** Xoá một lô (chỉ admin/dev). Danh sách tự cập nhật nhờ onSnapshot. */
 async function handleDelete(lot, button) {
   const lotCode = lot.lotCode || lot.id;
+  if (!state.canDelete) {
+    showToast('Chỉ admin mới được xoá dữ liệu.', 'error');
+    return;
+  }
   if (!navigator.onLine) {
     showToast('Đang ngoại tuyến. Cần có mạng để xoá lô.', 'error');
     return;
   }
-  if (!window.confirm(`Xoá lô ${lotCode}?\nThao tác này không thể hoàn tác.`)) return;
+  let force = isProcessedLot(lot);
+  const message = force ? `${PROCESSED_CONFIRM}\n\nLô: ${lotCode}` : `Xoá lô ${lotCode}?\nThao tác này không thể hoàn tác.`;
+  if (!window.confirm(message)) return;
 
   button.disabled = true;
   button.textContent = 'Đang xoá...';
   try {
-    await deleteIncomingLot({ lotId: lot.id });
+    try {
+      await deleteIncomingLot({ lotId: lot.id, force });
+    } catch (error) {
+      // Máy chủ phát hiện lô đã qua công đoạn sau (dữ liệu trên màn hình cũ): hỏi lại rồi mới xoá.
+      if (force || error?.details?.reason !== 'LOT_PROCESSED') throw error;
+      if (!window.confirm(`${PROCESSED_CONFIRM}\n\nLô: ${lotCode}`)) {
+        button.disabled = false;
+        button.textContent = 'Xoá';
+        return;
+      }
+      force = true;
+      await deleteIncomingLot({ lotId: lot.id, force });
+    }
     showToast(`Đã xoá lô ${lotCode}.`, 'success');
   } catch (error) {
     console.error('deleteIncomingLot failed:', error);
@@ -441,6 +603,7 @@ function showNoAccess(message) {
   setHidden(elements.noAccessPanel, false);
   setHidden(elements.createPanel, true);
   setHidden(elements.listPanel, true);
+  setHidden(elements.generatedPanel, true);
 }
 
 async function initialise() {
@@ -472,6 +635,7 @@ async function initialise() {
   }
   setHidden(elements.createPanel, false);
   setHidden(elements.listPanel, false);
+  setHidden(elements.generatedPanel, false);
   state.canDelete = isPrivilegedRole(resolveInitialRole(user.email, profile?.role));
   setHidden(elements.actionsHeader, !state.canDelete);
   fields.receivedDate.input.value = todayValue();

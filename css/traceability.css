@@ -118,6 +118,19 @@ input:focus, select:focus, textarea:focus { outline: 3px solid #b8ebd0; border-c
 .intake-table th { color: var(--green-dark); background: var(--green-soft); font-weight: 800; text-align: center; }
 .intake-table td:first-child { text-align: center; }
 
+/* Bảng dữ liệu tự động: kiểu cơ sở dữ liệu, cuộn ngang/dọc, tiêu đề cố định, bấm để sắp xếp */
+.db-hint { margin: -4px 0 12px; color: var(--muted); font-size: 13px; }
+.db-wrap { max-height: 460px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; }
+.db-table { min-width: 1280px; }
+.db-table th { position: sticky; top: 0; z-index: 1; padding: 0; white-space: nowrap; }
+.db-table th:first-child, .db-table th.col-actions { padding: 9px 10px; }
+.db-table td { white-space: nowrap; }
+.db-table tbody tr:nth-child(even) { background: #f5f7f6; }
+.db-table .sort-btn { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; padding: 9px 10px; color: inherit; background: transparent; border: 0; font-weight: 800; text-align: left; }
+.db-table .sort-btn:hover, .db-table .sort-btn.is-active { background: #c9efdb; }
+.sort-arrow { color: var(--muted); font-size: 11px; }
+.sort-btn.is-active .sort-arrow { color: var(--green-dark); }
+
 .form-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
 .checkbox-row { grid-template-columns: auto 1fr; align-items: center; }
 .checkbox-row input { width: 22px; min-height: 22px; accent-color: var(--green); }

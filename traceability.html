@@ -136,7 +136,32 @@
         </div>
         <div id="emptyState" class="empty-state is-hidden">
           <strong id="emptyTitle">Chưa có lô nhập hàng nào</strong>
-          <span id="emptyHint">Các lô bạn tạo sẽ xuất hiện tại đây ngay lập tức.</span>
+          <span id="emptyHint">Các lô nhập tay sẽ xuất hiện tại đây ngay lập tức.</span>
+        </div>
+      </section>
+
+      <!-- Lô phát sinh tự động từ các công đoạn (tách lô con...), hiển thị dạng bảng cơ sở dữ liệu -->
+      <section id="generatedPanel" class="queue-panel db-panel is-hidden" aria-labelledby="generatedTitle">
+        <div class="section-title">
+          <div>
+            <p>Cơ sở dữ liệu</p>
+            <h2 id="generatedTitle">Dữ liệu được tạo tự động</h2>
+          </div>
+          <span id="generatedCount" class="count" title="Số lô đang hiển thị / tổng số lô phát sinh">0</span>
+        </div>
+        <p class="db-hint">Các lô con phát sinh từ công đoạn (không phải nhập tay). Bấm tiêu đề cột để sắp xếp.</p>
+
+        <div class="table-wrap db-wrap">
+          <table class="intake-table db-table">
+            <thead>
+              <tr id="generatedHead"></tr>
+            </thead>
+            <tbody id="generatedRows"></tbody>
+          </table>
+        </div>
+        <div id="generatedEmpty" class="empty-state is-hidden">
+          <strong>Chưa có dữ liệu phát sinh</strong>
+          <span>Các lô con tách ra từ công đoạn sẽ được lưu tại đây.</span>
         </div>
       </section>
     </main>
