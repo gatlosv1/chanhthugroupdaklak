@@ -183,6 +183,8 @@ async function initialise() {
     return;
   }
 
+  document.querySelectorAll('[data-admin-only]').forEach((link) => { link.hidden = role === 'staff'; });
+
   const operableIds = STAGE_ORDER.filter((id) => canOperate(STAGES[id], { role, departmentId }));
   const requestedId = new URLSearchParams(window.location.search).get('stage');
   const stage = STAGES[requestedId] || STAGES[operableIds[0]];

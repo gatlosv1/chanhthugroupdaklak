@@ -656,6 +656,7 @@ async function initialise() {
   setHidden(elements.listPanel, false);
   setHidden(elements.generatedPanel, false);
   state.canDelete = isPrivilegedRole(resolveInitialRole(user.email, profile?.role));
+  document.querySelectorAll('[data-admin-only]').forEach((link) => { link.hidden = !state.canDelete; });
   setHidden(elements.actionsHeader, !state.canDelete);
   fields.receivedDate.input.value = todayValue();
   startListening();
