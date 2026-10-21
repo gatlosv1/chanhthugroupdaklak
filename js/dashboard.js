@@ -51,8 +51,14 @@ const ROLE_DEFAULT_PERMISSIONS = {
 
 const FIREBASE_API_KEY = firebaseConfig.apiKey;
 let currentRole = 'staff';
+let currentUserPermissions = [];
 let activeUsersLoadToken = 0;
 let congTachMuiTeams = [];
+
+function hasUserManagementPermission(role = currentRole, permissions = currentUserPermissions) {
+  if (role === 'admin' || role === 'dev') return true;
+  return Array.isArray(permissions) && permissions.includes('manageUsers');
+}
 
 // Lấy giá trị đang chọn của một select
 function getSelectedValues(select) {
@@ -298,8 +304,8 @@ function hideEditPanel() {
 createUserForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
 
-  if (!(currentRole === 'admin' || currentRole === 'dev')) {
-    showToast('Chỉ admin/dev mới được tạo tài khoản.', 'error');
+  if (!hasUserManagementPermission(currentRole, currentUserPermissions)) {
+    showToast('Bạn không có quyền tạo tài khoản người dùng.', 'error');
     return;
   }
 
@@ -423,7 +429,7 @@ watchAuthState(async (user) => {
     } catch (error) {
       console.warn('[Dashboard] Could not load cong tach mui teams', error);
     }
-    if (currentRole === 'admin' || currentRole === 'dev') {
+    if (hasUserManagementPermission(currentRole, currentUserPermissions)) {
       userManagementSection?.classList.remove('d-none');
       await loadUsers();
     } else {
@@ -439,6 +445,7 @@ watchAuthState(async (user) => {
 function renderProfile(user, profile) {
   const role = resolveInitialRole(user?.email, profile?.role);
   currentRole = role;
+  currentUserPermissions = Array.isArray(profile?.permissions) ? profile.permissions : [];
   const department = profile?.department || 'Chưa phân phòng';
   const name = profile?.name || user.displayName || 'Nhân viên';
 
@@ -449,7 +456,7 @@ function renderProfile(user, profile) {
   currentUserDepartment.textContent = department;
   avatarPreview.textContent = name.charAt(0).toUpperCase();
 
-  const isAdmin = role === 'admin' || role === 'dev';
+  const isAdmin = hasUserManagementPermission(role, currentUserPermissions);
   const isFullAccessUser = role === 'admin' || role === 'dev';
   const permissions = Array.isArray(profile?.pagePermissions) ? profile.pagePermissions : [];
   const navLinks = document.querySelectorAll('[data-page]');
@@ -464,6 +471,10 @@ function renderProfile(user, profile) {
     item.classList.toggle('is-hidden', !(isFullAccessUser));
   });
   manageUsersMenu?.classList.toggle('is-hidden', !isAdmin);
+
+  const canManageUsers = hasUserManagementPermission(role, currentUserPermissions);
+  const userManagementSection = document.getElementById('userManagementSection');
+  userManagementSection?.classList.toggle('d-none', !canManageUsers);
 
   document.querySelectorAll('[data-page-access]').forEach((card) => {
     const pageKey = card.dataset.pageAccess;
@@ -507,8 +518,8 @@ userTableBody?.addEventListener('click', async (event) => {
 
   if (!userId) return;
 
-  if (!(currentRole === 'admin' || currentRole === 'dev')) {
-    showToast('Chỉ admin/dev mới được quản lý tài khoản.', 'error');
+  if (!hasUserManagementPermission(currentRole, currentUserPermissions)) {
+    showToast('Bạn không có quyền quản lý tài khoản.', 'error');
     return;
   }
 
@@ -578,8 +589,8 @@ editUserForm?.addEventListener('submit', async (event) => {
   const userId = editUserId.value;
   if (!userId) return;
 
-  if (!(currentRole === 'admin' || currentRole === 'dev')) {
-    showToast('Chỉ admin/dev mới được chỉnh sửa tài khoản.', 'error');
+  if (!hasUserManagementPermission(currentRole, currentUserPermissions)) {
+    showToast('Bạn không có quyền chỉnh sửa tài khoản.', 'error');
     return;
   }
 
