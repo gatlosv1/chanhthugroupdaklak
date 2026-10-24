@@ -119,8 +119,8 @@ if (form) {
       try {
         const credential = await signUpWithEmailPassword(email, password);
         await ensureUserDocument();
-        logActivity({ action: 'login', page: 'auth', detail: 'Tạo tài khoản admin và đăng nhập' });
-        showToast(`Tạo tài khoản admin thành công. Chào ${credential.user.email}`, 'success');
+        logActivity({ action: 'login', page: 'auth', detail: 'Tạo tài khoản mới và đăng nhập' });
+        showToast(`Tạo tài khoản thành công. Chào ${credential.user.email}`, 'success');
         window.location.href = './dashboard.html';
         return;
       } catch (createError) {

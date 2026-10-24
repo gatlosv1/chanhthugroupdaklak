@@ -3,7 +3,7 @@ import { waitForAuth } from '../auth.js';
 import { ensureUserDocument } from '../userService.js';
 import { getUserProfile } from '../firestore.js';
 import { requirePageAccess } from '../pageAccess.js';
-import { resolveInitialRole } from '../roleUtils.js';
+import { resolveInitialRole, isPrivilegedRole } from '../roleUtils.js';
 import {
   collection,
   enableIndexedDbPersistence,
@@ -183,7 +183,7 @@ async function initialise() {
     return;
   }
 
-  document.querySelectorAll('[data-admin-only]').forEach((link) => { link.hidden = role === 'staff'; });
+  document.querySelectorAll('[data-admin-only]').forEach((link) => { link.hidden = !isPrivilegedRole(profile?.role); });
 
   const operableIds = STAGE_ORDER.filter((id) => canOperate(STAGES[id], { role, departmentId }));
   const requestedId = new URLSearchParams(window.location.search).get('stage');

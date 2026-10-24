@@ -3,7 +3,7 @@ import { waitForAuth } from './auth.js';
 import { ensureUserDocument } from './userService.js';
 import { getUserProfile } from './firestore.js';
 import { requirePageAccess } from './pageAccess.js';
-import { resolveInitialRole, isPrivilegedRole } from './roleUtils.js';
+import { isPrivilegedRole } from './roleUtils.js';
 import { stageName } from './traceability/workflow.js';
 import {
   collection,
@@ -33,6 +33,13 @@ const createIncomingLot = httpsCallable(getFunctions(undefined, FUNCTIONS_REGION
 const deleteIncomingLot = httpsCallable(getFunctions(undefined, FUNCTIONS_REGION), 'deleteIncomingLot', {
   timeout: CREATE_TIMEOUT_MS
 });
+const setDeletePassword = httpsCallable(getFunctions(undefined, FUNCTIONS_REGION), 'setDeletePassword', {
+  timeout: CREATE_TIMEOUT_MS
+});
+const getDeletePasswordStatus = httpsCallable(getFunctions(undefined, FUNCTIONS_REGION), 'getDeletePasswordStatus', {
+  timeout: CREATE_TIMEOUT_MS
+});
+const MIN_PASSWORD_LENGTH = 4;
 
 const $ = (id) => document.getElementById(id);
 
@@ -406,7 +413,7 @@ function createDeleteCell(lot) {
   button.className = 'danger-action';
   button.textContent = 'Xoá';
   button.setAttribute('aria-label', `Xoá lô ${lot.lotCode || lot.id}`);
-  button.addEventListener('click', () => handleDelete(lot, button));
+  button.addEventListener('click', () => handleDelete(lot));
   cell.append(button);
   return cell;
 }
@@ -530,8 +537,136 @@ function renderGeneratedList(hasFilter) {
 
 const PROCESSED_CONFIRM = 'Dữ liệu này đã được đưa đi phân loại. Bạn có chắc chắn muốn xóa?';
 
-/** Xoá một lô (chỉ admin/dev). Danh sách tự cập nhật nhờ onSnapshot. */
-async function handleDelete(lot, button) {
+/* ------------------------------------------------------------------ */
+/* Hộp thoại mật khẩu                                                  */
+/* ------------------------------------------------------------------ */
+
+const pw = {
+  dialog: $('pwDialog'),
+  form: $('pwForm'),
+  title: $('pwTitle'),
+  message: $('pwMessage'),
+  currentWrap: $('pwCurrentWrap'),
+  currentLabel: $('pwCurrentLabel'),
+  current: $('pwCurrent'),
+  newWrap: $('pwNewWrap'),
+  next: $('pwNew'),
+  confirmWrap: $('pwConfirmWrap'),
+  confirm: $('pwConfirm'),
+  error: $('pwError'),
+  cancel: $('pwCancel'),
+  submit: $('pwSubmit')
+};
+let pwHandler = null;
+
+/**
+ * Mở hộp thoại nhập mật khẩu. onSubmit({ current, next }) chạy khi bấm xác nhận;
+ * nếu ném lỗi thì hiện lỗi ngay trong hộp thoại, nếu thành công thì tự đóng.
+ */
+function openPasswordDialog({ title, message = '', currentLabel = '', askNew = false, submitLabel = 'Xác nhận' }, onSubmit) {
+  pw.title.textContent = title;
+  pw.message.textContent = message;
+  pw.currentLabel.textContent = currentLabel;
+  setHidden(pw.currentWrap, !currentLabel);
+  setHidden(pw.newWrap, !askNew);
+  setHidden(pw.confirmWrap, !askNew);
+  pw.form.reset();
+  pw.error.textContent = '';
+  pw.submit.textContent = submitLabel;
+  pwHandler = { askNew, hasCurrent: Boolean(currentLabel), onSubmit };
+  if (!pw.dialog.open) pw.dialog.showModal();
+  (currentLabel ? pw.current : pw.next).focus();
+}
+
+function closePasswordDialog() {
+  pwHandler = null;
+  if (pw.dialog.open) pw.dialog.close();
+}
+
+async function submitPasswordDialog(event) {
+  event.preventDefault();
+  const handler = pwHandler;
+  if (!handler || pw.submit.disabled) return;
+
+  const values = { current: pw.current.value, next: pw.next.value };
+  if (handler.hasCurrent && !values.current) {
+    pw.error.textContent = 'Nhập mật khẩu.';
+    return;
+  }
+  if (handler.askNew) {
+    if (values.next.length < MIN_PASSWORD_LENGTH) {
+      pw.error.textContent = `Mật khẩu mới cần ít nhất ${MIN_PASSWORD_LENGTH} ký tự.`;
+      return;
+    }
+    if (values.next !== pw.confirm.value) {
+      pw.error.textContent = 'Hai lần nhập mật khẩu mới không khớp.';
+      return;
+    }
+  }
+
+  pw.error.textContent = '';
+  pw.submit.disabled = true;
+  pw.cancel.disabled = true;
+  try {
+    await handler.onSubmit(values);
+    if (pwHandler === handler) closePasswordDialog();
+  } catch (error) {
+    // onSubmit có thể đã mở một hộp thoại khác (ví dụ chưa có mật khẩu xoá).
+    if (pwHandler === handler) pw.error.textContent = error.message || 'Có lỗi xảy ra. Vui lòng thử lại.';
+  } finally {
+    pw.submit.disabled = false;
+    pw.cancel.disabled = false;
+  }
+}
+
+/** Lỗi mật khẩu từ máy chủ đã có thông báo tiếng Việt cụ thể nên dùng nguyên văn. */
+function passwordErrorMessage(error, fallback) {
+  const reason = error?.details?.reason;
+  if (reason === 'WRONG_DELETE_PASSWORD') return error.message;
+  return describeError(error, fallback);
+}
+
+function openSetPasswordDialog(configured) {
+  openPasswordDialog(
+    {
+      title: configured ? 'Đổi mật khẩu xoá' : 'Đặt mật khẩu xoá',
+      message: configured ? '' : 'Mật khẩu này sẽ được hỏi mỗi khi xoá dữ liệu.',
+      currentLabel: configured ? 'Mật khẩu hiện tại' : '',
+      askNew: true,
+      submitLabel: 'Lưu mật khẩu'
+    },
+    async ({ current, next }) => {
+      try {
+        await setDeletePassword({ currentPassword: current, newPassword: next });
+      } catch (error) {
+        console.error('setDeletePassword failed:', error);
+        throw new Error(passwordErrorMessage(error, 'Không thể lưu mật khẩu. Vui lòng thử lại.'));
+      }
+      showToast('Đã lưu mật khẩu xoá.', 'success');
+    }
+  );
+}
+
+async function handleSetPasswordClick() {
+  if (!state.canDelete) {
+    showToast('Chỉ admin hoặc dev mới được đổi mật khẩu xoá.', 'error');
+    return;
+  }
+  if (!navigator.onLine) {
+    showToast('Đang ngoại tuyến. Cần có mạng để đặt mật khẩu.', 'error');
+    return;
+  }
+  try {
+    const result = await getDeletePasswordStatus();
+    openSetPasswordDialog(Boolean(result.data?.configured));
+  } catch (error) {
+    console.error('getDeletePasswordStatus failed:', error);
+    showToast(describeError(error, 'Không thể kiểm tra mật khẩu xoá.'), 'error');
+  }
+}
+
+/** Xoá một lô (chỉ admin/dev, có mật khẩu). Danh sách tự cập nhật nhờ onSnapshot. */
+function handleDelete(lot) {
   const lotCode = lot.lotCode || lot.id;
   if (!state.canDelete) {
     showToast('Chỉ admin mới được xoá dữ liệu.', 'error');
@@ -545,29 +680,33 @@ async function handleDelete(lot, button) {
   const message = force ? `${PROCESSED_CONFIRM}\n\nLô: ${lotCode}` : `Xoá lô ${lotCode}?\nThao tác này không thể hoàn tác.`;
   if (!window.confirm(message)) return;
 
-  button.disabled = true;
-  button.textContent = 'Đang xoá...';
-  try {
-    try {
-      await deleteIncomingLot({ lotId: lot.id, force });
-    } catch (error) {
-      // Máy chủ phát hiện lô đã qua công đoạn sau (dữ liệu trên màn hình cũ): hỏi lại rồi mới xoá.
-      if (force || error?.details?.reason !== 'LOT_PROCESSED') throw error;
-      if (!window.confirm(`${PROCESSED_CONFIRM}\n\nLô: ${lotCode}`)) {
-        button.disabled = false;
-        button.textContent = 'Xoá';
-        return;
+  openPasswordDialog(
+    { title: `Xoá lô ${lotCode}`, message: 'Nhập mật khẩu xoá để tiếp tục.', currentLabel: 'Mật khẩu xoá', submitLabel: 'Xoá' },
+    async ({ current }) => {
+      const attempt = () => deleteIncomingLot({ lotId: lot.id, force, password: current });
+      try {
+        try {
+          await attempt();
+        } catch (error) {
+          // Máy chủ thấy lô đã qua công đoạn sau (dữ liệu trên màn hình cũ): hỏi lại rồi mới xoá.
+          if (force || error?.details?.reason !== 'LOT_PROCESSED') throw error;
+          if (!window.confirm(`${PROCESSED_CONFIRM}\n\nLô: ${lotCode}`)) throw new Error('Đã huỷ xoá.');
+          force = true;
+          await attempt();
+        }
+      } catch (error) {
+        if (error?.details?.reason === 'NO_DELETE_PASSWORD') {
+          closePasswordDialog();
+          showToast('Chưa có mật khẩu xoá. Hãy đặt mật khẩu trước.', 'info');
+          openSetPasswordDialog(false);
+          return;
+        }
+        console.error('deleteIncomingLot failed:', error);
+        throw new Error(passwordErrorMessage(error, 'Không thể xoá lô. Vui lòng thử lại.'));
       }
-      force = true;
-      await deleteIncomingLot({ lotId: lot.id, force });
+      showToast(`Đã xoá lô ${lotCode}.`, 'success');
     }
-    showToast(`Đã xoá lô ${lotCode}.`, 'success');
-  } catch (error) {
-    console.error('deleteIncomingLot failed:', error);
-    showToast(describeError(error, 'Không thể xoá lô. Vui lòng thử lại.'), 'error');
-    button.disabled = false;
-    button.textContent = 'Xoá';
-  }
+  );
 }
 
 /** Hủy listener hiện tại (nếu có) để không bị rò rỉ hoặc nhân đôi. */
@@ -655,9 +794,10 @@ async function initialise() {
   setHidden(elements.createPanel, false);
   setHidden(elements.listPanel, false);
   setHidden(elements.generatedPanel, false);
-  state.canDelete = isPrivilegedRole(resolveInitialRole(user.email, profile?.role));
+  state.canDelete = isPrivilegedRole(profile?.role);
   document.querySelectorAll('[data-admin-only]').forEach((link) => { link.hidden = !state.canDelete; });
   setHidden(elements.actionsHeader, !state.canDelete);
+  setHidden($('adminTools'), !state.canDelete);
   fields.receivedDate.input.value = todayValue();
   startListening();
 }
@@ -673,6 +813,10 @@ Object.keys(fields).forEach((name) => {
 });
 
 elements.form.addEventListener('submit', handleSubmit);
+pw.form.addEventListener('submit', submitPasswordDialog);
+pw.cancel.addEventListener('click', closePasswordDialog);
+pw.dialog.addEventListener('close', () => { if (!pw.dialog.open) pwHandler = null; });
+$('setDeletePasswordBtn').addEventListener('click', handleSetPasswordClick);
 elements.reset.addEventListener('click', resetForm);
 elements.refresh.addEventListener('click', startListening);
 elements.clearFilter.addEventListener('click', clearFilters);

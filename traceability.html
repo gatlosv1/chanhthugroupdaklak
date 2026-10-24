@@ -113,6 +113,11 @@
           <span id="intakeCount" class="count" title="Số lô đang hiển thị / tổng số lô đã tải">0</span>
         </div>
 
+        <div id="adminTools" class="admin-tools is-hidden">
+          <button id="setDeletePasswordBtn" class="ghost-action" type="button">Đặt mật khẩu xoá</button>
+          <span class="db-hint">Mật khẩu được yêu cầu mỗi khi xoá dữ liệu và được lưu (dạng mã hoá) trên Firebase.</span>
+        </div>
+
         <div class="list-toolbar">
           <input id="searchInput" type="search" autocomplete="off" placeholder="Tìm mã lô, biển số, loại hàng, vùng..." aria-label="Tìm kiếm lô" />
           <input id="dateFilter" type="date" aria-label="Lọc theo ngày nhập hàng" />
@@ -170,6 +175,30 @@
         </div>
       </section>
     </main>
+
+    <dialog id="pwDialog" class="pw-dialog" aria-labelledby="pwTitle">
+      <form id="pwForm" novalidate>
+        <h3 id="pwTitle"></h3>
+        <p id="pwMessage" class="pw-message"></p>
+        <label class="field" id="pwCurrentWrap">
+          <span class="field-label" id="pwCurrentLabel">Mật khẩu</span>
+          <input id="pwCurrent" type="password" autocomplete="off" maxlength="100" />
+        </label>
+        <label class="field" id="pwNewWrap">
+          <span class="field-label">Mật khẩu mới</span>
+          <input id="pwNew" type="password" autocomplete="new-password" maxlength="100" />
+        </label>
+        <label class="field" id="pwConfirmWrap">
+          <span class="field-label">Nhập lại mật khẩu mới</span>
+          <input id="pwConfirm" type="password" autocomplete="new-password" maxlength="100" />
+        </label>
+        <small id="pwError" class="field-error" role="alert"></small>
+        <div class="form-actions">
+          <button id="pwCancel" class="ghost-action" type="button">Hủy</button>
+          <button id="pwSubmit" class="secondary-action" type="submit">Xác nhận</button>
+        </div>
+      </form>
+    </dialog>
 
     <script type="module" src="./js/traceabilityEntry.js"></script>
   </body>

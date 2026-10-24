@@ -3,7 +3,7 @@ import { waitForAuth } from '../auth.js';
 import { ensureUserDocument } from '../userService.js';
 import { getUserProfile } from '../firestore.js';
 import { requirePageAccess } from '../pageAccess.js';
-import { resolveInitialRole, isPrivilegedRole } from '../roleUtils.js';
+import { isPrivilegedRole } from '../roleUtils.js';
 import {
   collection,
   enableIndexedDbPersistence,
@@ -170,7 +170,7 @@ async function initialise() {
   elements.operator.textContent = profile?.name || user.email || 'Nhân viên';
   try {
     await requirePageAccess(user, 'traceability');
-    if (!isPrivilegedRole(resolveInitialRole(user.email, profile?.role))) {
+    if (!isPrivilegedRole(profile?.role)) {
       throw new Error('Chỉ admin mới được xem trang Tổng quan.');
     }
   } catch (error) {

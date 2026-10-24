@@ -1,6 +1,6 @@
 ﻿import { getCurrentUser, waitForAuth } from './auth.js';
 import { createOrUpdateUserProfile, getUserProfile, updateUserProfile } from './firestore.js';
-import { resolveInitialRole } from './roleUtils.js';
+import { normalizeUserRole } from './roleUtils.js';
 
 // Danh sách trang được vào mặc định
 // Phân theo từng vai trò
@@ -11,13 +11,13 @@ const DEFAULT_PAGE_ACCESS = {
 };
 
 // Đảm bảo user luôn có hồ sơ Firestore
-// Tự sửa vai trò và quyền nếu bị sai lệch
+// Vai trò chỉ lấy từ hồ sơ đã lưu, hồ sơ mới luôn là staff (không tự suy ra admin/dev từ email)
 export async function ensureUserDocument() {
   const authUser = await waitForAuth();
   if (!authUser) return null;
 
   const existing = await getUserProfile(authUser.uid);
-  const resolvedRole = resolveInitialRole(authUser.email, existing?.role);
+  const resolvedRole = normalizeUserRole(existing?.role);
   const defaultPagePermissions = DEFAULT_PAGE_ACCESS[resolvedRole] || DEFAULT_PAGE_ACCESS.staff;
 
   const baseProfile = {

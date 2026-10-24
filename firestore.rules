@@ -23,19 +23,30 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
 
-      allow create: if isOwner(userId)
-        && request.resource.data.role in ['admin', 'staff', 'dev']
-        && request.resource.data.email is string
-        && request.resource.data.keys().hasOnly([
-          'name', 'email', 'role', 'department', 'departmentId', 'pagePermissions', 'teamId', 'avatar', 'createdAt', 'updatedAt', 'password'
-        ]);
+      // Tự tạo hồ sơ chỉ được làm staff. Chỉ admin/dev mới tạo được hồ sơ admin/dev
+      // (nếu không, ai cũng tự gán quyền admin cho mình).
+      allow create: if (
+          isOwner(userId)
+          && request.resource.data.role == 'staff'
+          && request.resource.data.email is string
+          && request.resource.data.keys().hasOnly([
+            'name', 'email', 'role', 'department', 'departmentId', 'pagePermissions', 'permissions', 'teamId', 'avatar', 'createdAt', 'updatedAt', 'password'
+          ])
+        ) || (
+          isAdmin()
+          && request.resource.data.role in ['admin', 'staff', 'dev']
+          && request.resource.data.email is string
+          && request.resource.data.keys().hasOnly([
+            'name', 'email', 'role', 'department', 'departmentId', 'pagePermissions', 'permissions', 'teamId', 'avatar', 'createdAt', 'updatedAt', 'password'
+          ])
+        );
 
       allow update: if (
           isOwner(userId)
           && request.resource.data.role == resource.data.role
           && request.resource.data.email == resource.data.email
           && request.resource.data.keys().hasOnly([
-            'name', 'email', 'role', 'department', 'departmentId', 'pagePermissions', 'teamId', 'avatar', 'createdAt', 'updatedAt', 'password'
+            'name', 'email', 'role', 'department', 'departmentId', 'pagePermissions', 'permissions', 'teamId', 'avatar', 'createdAt', 'updatedAt', 'password'
           ])
         ) || isAdmin();
 

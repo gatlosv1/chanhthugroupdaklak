@@ -3,6 +3,7 @@ const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
 const workflow = require('./workflow');
+const crypto = require('crypto');
 
 admin.initializeApp();
 
@@ -384,7 +385,87 @@ exports.createIncomingLot = functions.region('asia-southeast1').https.onCall(asy
   return { lotId: lotRef.id, eventId: eventRef.id, lotCode };
 });
 
-/** Deletes an incoming lot (admin/dev only) together with its creation event. */
+/* ---- Mật khẩu xoá dữ liệu: lưu băm (scrypt + salt) trong Firestore, chỉ server đọc/ghi được ---- */
+const DELETE_PASSWORD_DOC = ['server_config', 'deleteProtection'];
+const MIN_PASSWORD_LENGTH = 4;
+
+const hashPassword = (password, salt) => crypto.scryptSync(password, salt, 64).toString('hex');
+
+async function assertPrivileged(db, context, message) {
+  const userSnapshot = await db.collection('users').doc(context.auth.uid).get();
+  const role = userSnapshot.exists ? userSnapshot.data()?.role : '';
+  if (context.auth.token.admin !== true && role !== 'admin' && role !== 'dev') {
+    throw new functions.https.HttpsError('permission-denied', message);
+  }
+}
+
+/** Trả về true nếu mật khẩu khớp; false nếu sai. Ném lỗi nếu chưa cấu hình. */
+async function checkDeletePassword(db, password) {
+  const snapshot = await db.collection(DELETE_PASSWORD_DOC[0]).doc(DELETE_PASSWORD_DOC[1]).get();
+  const stored = snapshot.exists ? snapshot.data() : null;
+  if (!stored?.hash || !stored?.salt) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Chưa đặt mật khẩu xoá. Admin hãy bấm "Đặt mật khẩu xoá" trước.',
+      { reason: 'NO_DELETE_PASSWORD' }
+    );
+  }
+  if (typeof password !== 'string' || !password) return false;
+  const expected = Buffer.from(stored.hash, 'hex');
+  const actual = Buffer.from(hashPassword(password, stored.salt), 'hex');
+  return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
+}
+
+async function assertDeletePassword(db, password) {
+  if (!(await checkDeletePassword(db, password))) {
+    throw new functions.https.HttpsError('permission-denied', 'Mật khẩu xoá không đúng.', { reason: 'WRONG_DELETE_PASSWORD' });
+  }
+}
+
+/** Đặt hoặc đổi mật khẩu xoá (admin/dev). Đổi mật khẩu cần nhập mật khẩu hiện tại. */
+exports.setDeletePassword = functions.region('asia-southeast1').https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Bạn cần đăng nhập.');
+  }
+  const db = admin.firestore();
+  await assertPrivileged(db, context, 'Chỉ admin hoặc dev mới được đặt mật khẩu xoá.');
+
+  const newPassword = typeof data?.newPassword === 'string' ? data.newPassword : '';
+  if (newPassword.length < MIN_PASSWORD_LENGTH || newPassword.length > 100) {
+    throw new functions.https.HttpsError('invalid-argument', `Mật khẩu xoá cần từ ${MIN_PASSWORD_LENGTH} đến 100 ký tự.`);
+  }
+
+  const ref = db.collection(DELETE_PASSWORD_DOC[0]).doc(DELETE_PASSWORD_DOC[1]);
+  const existing = await ref.get();
+  if (existing.exists && existing.data()?.hash) {
+    if (!(await checkDeletePassword(db, data?.currentPassword))) {
+      throw new functions.https.HttpsError('permission-denied', 'Mật khẩu hiện tại không đúng.', { reason: 'WRONG_DELETE_PASSWORD' });
+    }
+  }
+
+  const salt = crypto.randomBytes(16).toString('hex');
+  await ref.set({
+    salt,
+    hash: hashPassword(newPassword, salt),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedBy: context.auth.uid
+  });
+  functions.logger.info('Delete password updated', { by: context.auth.uid });
+  return { ok: true, changed: existing.exists && Boolean(existing.data()?.hash) };
+});
+
+/** Cho giao diện biết đã có mật khẩu xoá chưa (không trả về băm). */
+exports.getDeletePasswordStatus = functions.region('asia-southeast1').https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Bạn cần đăng nhập.');
+  }
+  const db = admin.firestore();
+  await assertPrivileged(db, context, 'Chỉ admin hoặc dev mới xem được trạng thái này.');
+  const snapshot = await db.collection(DELETE_PASSWORD_DOC[0]).doc(DELETE_PASSWORD_DOC[1]).get();
+  return { configured: Boolean(snapshot.exists && snapshot.data()?.hash) };
+});
+
+/** Deletes an incoming lot (admin/dev only, needs the delete password) together with its events. */
 exports.deleteIncomingLot = functions.region('asia-southeast1').https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Bạn cần đăng nhập để xoá lô.');
@@ -395,12 +476,8 @@ exports.deleteIncomingLot = functions.region('asia-southeast1').https.onCall(asy
   }
 
   const db = admin.firestore();
-  const userSnapshot = await db.collection('users').doc(context.auth.uid).get();
-  const role = userSnapshot.exists ? userSnapshot.data()?.role : '';
-  if (context.auth.token.admin !== true && role !== 'admin' && role !== 'dev') {
-    throw new functions.https.HttpsError('permission-denied', 'Chỉ admin hoặc dev mới được xoá lô.');
-  }
-
+  await assertPrivileged(db, context, 'Chỉ admin hoặc dev mới được xoá lô.');
+  await assertDeletePassword(db, data?.password);
   const lotRef = db.collection('lots').doc(lotId);
   const [lotSnapshot, eventsSnapshot, childrenSnapshot] = await Promise.all([
     lotRef.get(),
