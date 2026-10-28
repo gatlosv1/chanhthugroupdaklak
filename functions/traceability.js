@@ -92,6 +92,7 @@ async function commitStageResult(data, context, mode) {
           passedKg: data?.passedKg,
           rejectedHeavyKg: data?.rejectedHeavyKg,
           rejectedLightKg: data?.rejectedLightKg,
+          exportKg: data?.exportKg,
           soakTarget: text(data?.soakTarget, 50)
         };
     const result = workflow.evaluateStageResult(stageDef, lot, { ...requested, inputKg });
@@ -99,8 +100,13 @@ async function commitStageResult(data, context, mode) {
 
     const now = admin.firestore.Timestamp.now();
     const serverNow = admin.firestore.FieldValue.serverTimestamp();
+    const usesExport = stageDef.kind === 'grade' || Boolean(stageDef.partialExport);
+    // Xuất một phần: lô chính ở lại công đoạn với phần còn lại, phần xuất ra thành lô con.
+    const partial = result.remainderKg > 0;
     const kgData = {
       inputKg: result.inputKg,
+      ...(usesExport ? { exportKg: result.exportKg } : {}),
+      ...(partial ? { remainderKg: result.remainderKg } : {}),
       passedKg: result.passedKg,
       rejectedHeavyKg: result.rejectedHeavyKg,
       rejectedLightKg: result.rejectedLightKg,
@@ -139,15 +145,50 @@ async function commitStageResult(data, context, mode) {
     const nextReworkCount = stageDef.rework && result.lightTarget ? reworkCount + 1 : reworkCount;
     const action = mode === 'soak' ? 'SEND_TO_SOAK' : mode === 'reject' ? 'REJECT' : 'RECORD_RESULT';
     const update = {
-      [`stages.${stageId}`]: stageRecord,
       lastStageId: stageId,
       updatedAt: serverNow
     };
+    if (!partial) update[`stages.${stageId}`] = stageRecord;
     const entries = [];
     let nextStage = null;
     let child = null;
+    let childCount = Number(lot.childCount || 0);
 
-    if (result.outcome === 'passed') {
+    const createChild = (targetId, kg, childReworkCount, kgInfo) => {
+      childCount += 1;
+      const childRef = db.collection('lots').doc();
+      const childCode = `${lot.lotCode}-${workflow.STAGES[targetId].short}${childCount}`;
+      transaction.create(childRef, {
+        lotCode: childCode,
+        parentLotIds: [lotId],
+        createdAt: serverNow,
+        createdBy: actor.uid,
+        updatedAt: serverNow,
+        intake: { ...(lot.intake || {}), initialKg: kg },
+        lastStageId: stageId,
+        stages: { [targetId]: pendingStage(targetId) },
+        ...enterStage(targetId, kg, childReworkCount),
+        history: [historyEntry(actor, {
+          stage: stageId,
+          action: 'SPLIT_FROM_PARENT',
+          fromStatus: null,
+          toStatus: 'pending',
+          note,
+          kgData: { parentLotId: lotId, parentLotCode: lot.lotCode, lightKg: kg, ...kgInfo }
+        })]
+      });
+      update.childCount = childCount;
+      return { id: childRef.id, lotCode: childCode, stageId: targetId };
+    };
+    const children = [];
+
+    if (partial) {
+      // Lô chính vẫn đứng ở công đoạn này (status 'waiting') với phần chưa xuất.
+      Object.assign(update, { currentKg: result.remainderKg });
+      if (result.passedKg > 0) children.push(createChild(stageDef.next, result.passedKg, reworkCount, { passedKg: result.passedKg }));
+      if (result.rejectedLightKg > 0) children.push(createChild(result.lightTarget, result.rejectedLightKg, nextReworkCount, {}));
+      child = children[0] || null;
+    } else if (result.outcome === 'passed') {
       if (stageDef.next) {
         nextStage = stageDef.next;
         Object.assign(update, enterStage(nextStage, result.passedKg, reworkCount), { [`stages.${nextStage}`]: pendingStage(nextStage) });
@@ -159,30 +200,7 @@ async function commitStageResult(data, context, mode) {
       }
       // Phần hư nhẹ tách thành lô con để lô chính vẫn đi tiếp.
       if (result.rejectedLightKg > 0) {
-        const childCount = Number(lot.childCount || 0) + 1;
-        const childRef = db.collection('lots').doc();
-        const childCode = `${lot.lotCode}-${workflow.STAGES[result.lightTarget].short}${childCount}`;
-        update.childCount = childCount;
-        child = { id: childRef.id, lotCode: childCode, stageId: result.lightTarget };
-        transaction.create(childRef, {
-          lotCode: childCode,
-          parentLotIds: [lotId],
-          createdAt: serverNow,
-          createdBy: actor.uid,
-          updatedAt: serverNow,
-          intake: { ...(lot.intake || {}), initialKg: result.rejectedLightKg },
-          lastStageId: stageId,
-          stages: { [result.lightTarget]: pendingStage(result.lightTarget) },
-          ...enterStage(result.lightTarget, result.rejectedLightKg, nextReworkCount),
-          history: [historyEntry(actor, {
-            stage: stageId,
-            action: 'SPLIT_FROM_PARENT',
-            fromStatus: null,
-            toStatus: 'pending',
-            note,
-            kgData: { parentLotId: lotId, parentLotCode: lot.lotCode, lightKg: result.rejectedLightKg }
-          })]
-        });
+        child = createChild(result.lightTarget, result.rejectedLightKg, nextReworkCount, {});
       }
     } else if (result.outcome === 'failed') {
       // Không có phần đạt: cả phần hư nhẹ còn lại đi tiếp ngay trong lô này.
@@ -198,12 +216,13 @@ async function commitStageResult(data, context, mode) {
       stage: stageId,
       action,
       fromStatus: 'pending',
-      toStatus: result.outcome,
+      toStatus: partial ? 'pending' : result.outcome,
       note,
       kgData: {
         ...kgData,
         ...(nextStage ? { nextStage } : {}),
         ...(child ? { childLotId: child.id, childLotCode: child.lotCode, childStage: child.stageId } : {}),
+        ...(partial ? { children: children.map((item) => ({ lotId: item.id, lotCode: item.lotCode, stage: item.stageId })) } : {}),
         ...(!stageDef.next && result.outcome === 'passed' ? { completed: true } : {})
       }
     }));
@@ -215,9 +234,12 @@ async function commitStageResult(data, context, mode) {
       lotCode: lot.lotCode || '',
       outcome: result.outcome,
       nextStage,
-      completed: !stageDef.next && result.outcome === 'passed',
+      completed: !partial && !stageDef.next && result.outcome === 'passed',
       lossKg: result.lossKg,
-      child
+      partial,
+      remainderKg: result.remainderKg,
+      child,
+      children
     };
   });
 }

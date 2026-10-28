@@ -11,7 +11,7 @@
                                "name":  "Xoài dập, hư hỏng nhẹ",
                                "severity":  "minor",
                                "reworkEligible":  true,
-                               "reworkStageId":  "SOAK_1_1"
+                               "reworkStageId":  "SOAK_2"
                            },
                            {
                                "id":  "PEEL_DEFECT",

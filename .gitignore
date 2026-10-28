@@ -3,3 +3,4 @@ backup/
 .env
 .env.*
 js/firebase.local.js
+node_modules/

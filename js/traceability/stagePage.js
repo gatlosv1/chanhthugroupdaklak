@@ -15,7 +15,7 @@ import {
 import { rejectLot, sendToSoak, updateLotStage } from './api.js';
 import { describeError, el, formatKg, setConnection, showToast, watchConnection } from './ui.js';
 import {
-  DEPARTMENTS, PHASES, STAGES, STAGE_ORDER, canOperate, resolveDepartmentId
+  DEPARTMENTS, PHASES, STAGES, STAGE_ORDER, canOperate, legacyIdsOf, resolveDepartmentId
 } from './workflow.js';
 import { createLotSelector } from './components/LotSelector.js';
 import { createStageActionForm } from './components/StageActionForm.js';
@@ -89,7 +89,11 @@ function setNoAccess(message) {
 function startListening() {
   state.stopListening?.();
   // Chỉ lọc theo một trường để không cần composite index; lọc trạng thái ở client.
-  const lotsQuery = query(collection(db, 'lots'), where('pendingStageId', '==', state.stage.id), limit(LIST_LIMIT));
+  const lotsQuery = query(
+    collection(db, 'lots'),
+    where('pendingStageId', 'in', [state.stage.id, ...legacyIdsOf(state.stage.id)]),
+    limit(LIST_LIMIT)
+  );
   state.stopListening = onSnapshot(lotsQuery, (snapshot) => {
     setConnection(!snapshot.metadata.fromCache || navigator.onLine ? 'Đã kết nối' : 'Đang ngoại tuyến', !navigator.onLine);
     state.lots = snapshot.docs
@@ -113,11 +117,23 @@ function startListening() {
 /* ---------- Thao tác ---------- */
 function summarize(result) {
   const next = STAGES[result.nextStage]?.name;
-  if (result.completed) return `Lô ${result.lotCode} đã hoàn tất và vào kho đông.`;
-  if (result.outcome === 'rejected') return `Đã loại bỏ lô ${result.lotCode}.`;
-  const child = result.child ? ` Phần hư nhẹ tách thành lô ${result.child.lotCode} → ${STAGES[result.child.stageId].name}.` : '';
   const loss = result.lossKg > 0 ? ` Hao hụt ${formatKg(result.lossKg)} kg.` : '';
-  return `Lô ${result.lotCode} → ${next}.${child}${loss}`;
+  if (result.partial) {
+    const outputs = (result.children || []).map((item) => `${item.lotCode} → ${stageLabel(item.stageId)}`).join('; ');
+    return `Đã xuất một phần lô ${result.lotCode}${outputs ? `: ${outputs}` : ''}. Còn ${formatKg(result.remainderKg)} kg ở lại hàng chờ.${loss}`;
+  }
+  if (result.completed) return `Lô ${result.lotCode} đã hoàn tất và vào kho đông.`;
+  if (result.outcome === 'rejected') return `Đã loại bỏ lô ${result.lotCode}.${loss}`;
+  const child = result.child ? ` Phần hư nhẹ tách thành lô ${result.child.lotCode} → ${stageLabel(result.child.stageId)}.` : '';
+  return `Lô ${result.lotCode} → ${next || stageLabel(result.nextStage)}.${child}${loss}`;
+}
+
+const stageLabel = (id) => STAGES[id]?.name || id || '-';
+
+/** Server trả về công đoạn mà giao diện không biết = Cloud Functions chưa được triển khai bản mới. */
+function hasUnknownStage(result) {
+  const ids = [result.nextStage, result.child?.stageId, ...(result.children || []).map((item) => item.stageId)];
+  return ids.some((id) => id && !STAGES[id]);
 }
 
 /** Gọi một Cloud Function xử lý công đoạn và cập nhật giao diện; không ném lỗi ra ngoài. */
@@ -128,7 +144,14 @@ async function perform(call, payload) {
   }
   try {
     const result = await call(payload);
-    showToast(summarize(result), 'success');
+    if (hasUnknownStage(result)) {
+      showToast(
+        `Máy chủ chưa cập nhật quy trình mới (lô ${result.lotCode} bị chuyển tới "${result.nextStage}"). Cần triển khai lại Cloud Functions: firebase deploy --only functions.`,
+        'error'
+      );
+    } else {
+      showToast(summarize(result), 'success');
+    }
     state.selectedId = null;
     form.reset();
     renderSelection();

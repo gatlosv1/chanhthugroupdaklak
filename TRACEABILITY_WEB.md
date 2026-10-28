@@ -29,7 +29,7 @@ Dùng một route nhập liệu duy nhất: `traceability.html`. Không tin `dep
 
 | departmentId | Công đoạn phụ trách |
 | --- | --- |
-| `PREPROCESS` | `SORT_1`-`SORT_4`, `RIPEN_1`-`RIPEN_3`, `RIPEN_REWORK`, `WASH_1`-`WASH_4` |
+| `PREPROCESS` | `SORT_1` (Phân loại xuống xe), `SOAK_1` (Ủ lần 1), `SORT_SOAK_1` (Lựa sau ủ 1), `SOAK_2` (Ủ lần 2), `SORT_SOAK_2` (Lựa sau ủ 2) |
 | `PROCESSING` | `PEEL`, `PEEL_CHECK`, `CHEEK_SLICE`, `CHEEK_CHECK`, `FORM` |
 | `FREEZE_PACK` | `FREEZE`, `FREEZER_EXIT`, `METAL_DETECT`, `PE_PA_BAG`, `CARTON_PACK` |
 | `COLD_STORAGE` | `COLD_STORAGE_IN`, `TRAY_RECEIPT`, `TRAY_ISSUE` |

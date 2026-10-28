@@ -95,27 +95,95 @@ await test('đạt toàn bộ → sang công đoạn kế, ghi history và stage
   assert.equal(doc.history[0].operatorName, 'Nhân viên Sơ chế');
 });
 
-await test('tách hư nhẹ thành lô con, lô chính đi tiếp với phần đạt', async () => {
-  newLot('b');
-  const out = await updateLotStage({ lotId: 'b', stageId: 'SORT_1', passedKg: 70, rejectedLightKg: 20, rejectedHeavyKg: 5 }, ctx('pre'));
+await test('Lựa sau ủ 1 xuất toàn bộ: đạt đi tiếp, không đạt tách lô con sang Ủ lần 2', async () => {
+  newLot('b', { currentStage: 'SORT_SOAK_1', pendingStageId: 'SORT_SOAK_1' });
+  const out = await updateLotStage({ lotId: 'b', stageId: 'SORT_SOAK_1', exportKg: 100, passedKg: 70, rejectedLightKg: 30 }, ctx('pre'));
+  assert.equal(out.nextStage, 'PEEL');
+  assert.equal(out.partial, false);
+  assert.equal(lot('b').currentStage, 'PEEL');
   assert.equal(lot('b').currentKg, 70);
-  assert.equal(out.lossKg, 5);
   const child = lot(out.child.id);
-  assert.equal(child.lotCode, 'LOT-b-U111');
-  assert.equal(child.currentStage, 'SOAK_1_1');
-  assert.equal(child.currentKg, 20);
+  assert.equal(child.lotCode, 'LOT-b-U21');
+  assert.equal(child.currentStage, 'SOAK_2');
+  assert.equal(child.currentKg, 30);
   assert.deepEqual(child.parentLotIds, ['b']);
-  assert.equal(child.intake.initialKg, 20);
+  assert.equal(child.intake.initialKg, 30);
   assert.equal(child.history[0].action, 'SPLIT_FROM_PARENT');
   assert.equal(lot('b').childCount, 1);
+  assert.equal(lot('b').history[0].kgData.exportKg, 100);
 });
 
-await test('sendToSoak chuyển cả lô, không tạo lô con', async () => {
-  newLot('c');
+await test('Lựa sau ủ 1: đạt + không đạt khác số lượng xuất bị từ chối', async () => {
+  newLot('b2', { currentStage: 'SORT_SOAK_1', pendingStageId: 'SORT_SOAK_1' });
+  await rejects(updateLotStage({ lotId: 'b2', stageId: 'SORT_SOAK_1', exportKg: 100, passedKg: 70, rejectedLightKg: 20 }, ctx('pre')), 'invalid-argument');
+  await rejects(updateLotStage({ lotId: 'b2', stageId: 'SORT_SOAK_1', exportKg: 120, passedKg: 120 }, ctx('pre')), 'invalid-argument');
+  assert.equal(lot('b2').currentStage, 'SORT_SOAK_1');
+});
+
+await test('Lựa sau ủ 1 xuất một phần: lô chính ở lại, phần xuất thành lô con', async () => {
+  newLot('b3', { currentStage: 'SORT_SOAK_1', pendingStageId: 'SORT_SOAK_1' });
+  const out = await updateLotStage({ lotId: 'b3', stageId: 'SORT_SOAK_1', exportKg: 40, passedKg: 25, rejectedLightKg: 15 }, ctx('pre'));
+  assert.equal(out.partial, true);
+  assert.equal(out.remainderKg, 60);
+  assert.equal(out.children.length, 2);
+  const main = lot('b3');
+  assert.equal(main.currentStage, 'SORT_SOAK_1');
+  assert.equal(main.status, 'waiting');
+  assert.equal(main.currentKg, 60);
+  assert.equal(main.stages.SORT_SOAK_1, undefined);
+  const [passedChild, failedChild] = out.children.map((item) => lot(item.id));
+  assert.equal(passedChild.currentStage, 'PEEL');
+  assert.equal(passedChild.currentKg, 25);
+  assert.equal(failedChild.currentStage, 'SOAK_2');
+  assert.equal(failedChild.currentKg, 15);
+  assert.equal(main.history[0].kgData.remainderKg, 60);
+  // Phần còn lại xuất tiếp được.
+  const rest = await updateLotStage({ lotId: 'b3', stageId: 'SORT_SOAK_1', exportKg: 60, passedKg: 60 }, ctx('pre'));
+  assert.equal(rest.partial, false);
+  assert.equal(lot('b3').currentStage, 'PEEL');
+});
+
+await test('Lựa sau ủ 2: không đạt vào hao hụt và bỏ luôn, đạt xuống Gọt vỏ', async () => {
+  newLot('b4', { currentStage: 'SORT_SOAK_2', pendingStageId: 'SORT_SOAK_2' });
   const before = store.size;
-  const out = await sendToSoak({ lotId: 'c', stageId: 'SORT_1' }, ctx('pre'));
+  const out = await updateLotStage({ lotId: 'b4', stageId: 'SORT_SOAK_2', exportKg: 100, passedKg: 60, rejectedHeavyKg: 40 }, ctx('pre'));
+  assert.equal(out.nextStage, 'PEEL');
+  assert.equal(out.lossKg, 40);
+  assert.equal(store.size, before);
+  assert.equal(lot('b4').currentKg, 60);
+  assert.equal(lot('b4').history[0].kgData.lossKg, 40);
+});
+
+await test('Ủ lần 1 xong chuyển cả lô sang Lựa sau ủ 1', async () => {
+  newLot('b5', { currentStage: 'SOAK_1', pendingStageId: 'SOAK_1' });
+  const out = await updateLotStage({ lotId: 'b5', stageId: 'SOAK_1', passedKg: 100 }, ctx('pre'));
+  assert.equal(out.nextStage, 'SORT_SOAK_1');
+  assert.equal(lot('b5').currentStage, 'SORT_SOAK_1');
+});
+
+await test('Ủ lần 1 hàng tồn: chuyển một phần sang Lựa sau ủ 1, phần còn lại ở lại', async () => {
+  newLot('b6', { currentStage: 'SOAK_1', pendingStageId: 'SOAK_1' });
+  const out = await updateLotStage({ lotId: 'b6', stageId: 'SOAK_1', exportKg: 30, passedKg: 30 }, ctx('pre'));
+  assert.equal(out.partial, true);
+  assert.equal(out.remainderKg, 70);
+  assert.equal(lot('b6').currentStage, 'SOAK_1');
+  assert.equal(lot('b6').currentKg, 70);
+  const child = lot(out.child.id);
+  assert.equal(child.currentStage, 'SORT_SOAK_1');
+  assert.equal(child.currentKg, 30);
+  await rejects(updateLotStage({ lotId: 'b6', stageId: 'SOAK_1', exportKg: 80, passedKg: 80 }, ctx('pre')), 'invalid-argument');
+  await rejects(updateLotStage({ lotId: 'b6', stageId: 'SOAK_1', exportKg: 40, passedKg: 30 }, ctx('pre')), 'invalid-argument');
+  const rest = await updateLotStage({ lotId: 'b6', stageId: 'SOAK_1', exportKg: 70, passedKg: 70 }, ctx('pre'));
+  assert.equal(rest.partial, false);
+  assert.equal(lot('b6').currentStage, 'SORT_SOAK_1');
+});
+
+await test('sendToSoak chuyển cả lô Lựa sau ủ 1 sang Ủ lần 2, không tạo lô con', async () => {
+  newLot('c', { currentStage: 'SORT_SOAK_1', pendingStageId: 'SORT_SOAK_1' });
+  const before = store.size;
+  const out = await sendToSoak({ lotId: 'c', stageId: 'SORT_SOAK_1' }, ctx('pre'));
   assert.equal(out.outcome, 'failed');
-  assert.equal(lot('c').currentStage, 'SOAK_1_1');
+  assert.equal(lot('c').currentStage, 'SOAK_2');
   assert.equal(lot('c').history[0].action, 'SEND_TO_SOAK');
   assert.equal(store.size, before);
 });
@@ -146,7 +214,7 @@ await test('phân quyền: sai bộ phận bị chặn, admin được qua', asy
 
 await test('chặn thao tác sai công đoạn, sai trạng thái, chưa đăng nhập, lô không tồn tại', async () => {
   newLot('h');
-  await rejects(updateLotStage({ lotId: 'h', stageId: 'SORT_2', passedKg: 10 }, ctx('pre')), 'failed-precondition');
+  await rejects(updateLotStage({ lotId: 'h', stageId: 'SORT_SOAK_1', passedKg: 10 }, ctx('pre')), 'failed-precondition');
   newLot('i', { status: 'rejected' });
   await rejects(updateLotStage({ lotId: 'i', stageId: 'SORT_1', passedKg: 10 }, ctx('pre')), 'failed-precondition');
   await rejects(updateLotStage({ lotId: 'h', stageId: 'SORT_1', passedKg: 10 }, {}), 'unauthenticated');
@@ -176,6 +244,32 @@ await test('Kiểm má: đạt thì sang Định hình, không đạt quay lại
   assert.equal(lot(out.child.id).reworkCount, 1);
   newLot('l', { currentStage: 'CHECK_FLESH', pendingStageId: 'CHECK_FLESH', reworkCount: 2 });
   await rejects(updateLotStage({ lotId: 'l', stageId: 'CHECK_FLESH', passedKg: 80, rejectedLightKg: 20, soakTarget: 'FLESH' }, ctx('proc')), 'invalid-argument');
+});
+
+await test('luồng đủ: Phân loại xuống xe → Ủ 1 → Lựa sau ủ 1 → (đạt) Gọt vỏ / (không đạt) Ủ 2 → Lựa sau ủ 2 → Gọt vỏ', async () => {
+  newLot('flow');
+  await updateLotStage({ lotId: 'flow', stageId: 'SORT_1', passedKg: 100 }, ctx('pre'));
+  assert.equal(lot('flow').currentStage, 'SOAK_1');
+  await updateLotStage({ lotId: 'flow', stageId: 'SOAK_1', exportKg: 100, passedKg: 100 }, ctx('pre'));
+  assert.equal(lot('flow').currentStage, 'SORT_SOAK_1');
+  const afterSoak1 = await updateLotStage({ lotId: 'flow', stageId: 'SORT_SOAK_1', exportKg: 100, passedKg: 60, rejectedLightKg: 40 }, ctx('pre'));
+  assert.equal(lot('flow').currentStage, 'PEEL');
+  assert.equal(lot('flow').currentKg, 60);
+  const soak2 = afterSoak1.child.id;
+  assert.equal(lot(soak2).currentStage, 'SOAK_2');
+  await updateLotStage({ lotId: soak2, stageId: 'SOAK_2', passedKg: 40 }, ctx('pre'));
+  assert.equal(lot(soak2).currentStage, 'SORT_SOAK_2');
+  const afterSoak2 = await updateLotStage({ lotId: soak2, stageId: 'SORT_SOAK_2', exportKg: 40, passedKg: 30, rejectedHeavyKg: 10 }, ctx('pre'));
+  assert.equal(afterSoak2.lossKg, 10);
+  assert.equal(lot(soak2).currentStage, 'PEEL');
+  assert.equal(lot(soak2).currentKg, 30);
+});
+
+await test('lô đang kẹt ở Phân loại 2 (bản cũ) vẫn xử lý được ở Lựa sau ủ 1', async () => {
+  newLot('stuck', { currentStage: 'SORT_2', pendingStageId: 'SORT_2' });
+  const out = await updateLotStage({ lotId: 'stuck', stageId: 'SORT_SOAK_1', exportKg: 100, passedKg: 100 }, ctx('pre'));
+  assert.equal(out.nextStage, 'PEEL');
+  assert.equal(lot('stuck').currentStage, 'PEEL');
 });
 
 console.log(`\n${count} test đạt.`);

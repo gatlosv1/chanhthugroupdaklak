@@ -14,6 +14,7 @@ function describeKg(kg = {}) {
   const parts = [];
   if (kg.initialKg !== undefined) parts.push(`Nhập ${formatKg(kg.initialKg)} kg`);
   if (kg.inputKg !== undefined) parts.push(`Vào ${formatKg(kg.inputKg)}`);
+  if (kg.exportKg !== undefined) parts.push(`xuất ${formatKg(kg.exportKg)}`);
   if (kg.passedKg) parts.push(`đạt ${formatKg(kg.passedKg)}`);
   if (kg.rejectedLightKg) parts.push(`hư nhẹ ${formatKg(kg.rejectedLightKg)}`);
   if (kg.rejectedHeavyKg) parts.push(`hư nặng ${formatKg(kg.rejectedHeavyKg)}`);
@@ -46,7 +47,12 @@ export function createHistoryTimeline() {
       const kgText = describeKg(kg);
       if (kgText) lines.push(el('div', 'timeline-kg', { textContent: kgText }));
       if (kg.nextStage) lines.push(el('div', 'timeline-kg', { textContent: `→ ${STAGES[kg.nextStage]?.name || kg.nextStage}` }));
-      if (kg.childLotCode) lines.push(el('div', 'timeline-kg', { textContent: `Lô con: ${kg.childLotCode}` }));
+      if (kg.remainderKg) lines.push(el('div', 'timeline-kg', { textContent: `Còn lại ${formatKg(kg.remainderKg)} kg ở lại công đoạn` }));
+      if (Array.isArray(kg.children)) {
+        kg.children.forEach((item) => lines.push(el('div', 'timeline-kg', {
+          textContent: `Lô con: ${item.lotCode} → ${STAGES[item.stage]?.name || item.stage}`
+        })));
+      } else if (kg.childLotCode) lines.push(el('div', 'timeline-kg', { textContent: `Lô con: ${kg.childLotCode}` }));
       if (kg.parentLotCode) lines.push(el('div', 'timeline-kg', { textContent: `Lô mẹ: ${kg.parentLotCode}` }));
       if (entry.note) lines.push(el('div', 'timeline-note', { textContent: entry.note }));
       element.append(el('li', `timeline-item timeline-item--${label.tone}`, {}, lines));

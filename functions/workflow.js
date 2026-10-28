@@ -31,14 +31,16 @@ const stage = (id, name, short, phase, departmentId, kind, next, lightTo = [], e
 });
 
 const STAGES = {
-  SORT_1: stage('SORT_1', 'Phân loại 1', 'P1', 'A', 'PREPROCESS', 'sort', 'SOAK_1', ['SOAK_1_1'], { lightLabel: 'Hư nhẹ → Ủ 1.1' }),
-  SOAK_1: stage('SOAK_1', 'Ủ 1', 'U1', 'A', 'PREPROCESS', 'soak', 'SORT_2'),
-  SOAK_1_1: stage('SOAK_1_1', 'Ủ 1.1', 'U11', 'A', 'PREPROCESS', 'soak', 'SORT_2'),
-  SORT_2: stage('SORT_2', 'Phân loại 2', 'P2', 'A', 'PREPROCESS', 'sort', 'PEEL', ['SOAK_2'], { lightLabel: 'Hư nhẹ → Ủ 2' }),
-  SOAK_2: stage('SOAK_2', 'Ủ 2', 'U2', 'A', 'PREPROCESS', 'soak', 'SORT_3'),
-  SORT_3: stage('SORT_3', 'Phân loại 3', 'P3', 'A', 'PREPROCESS', 'sort', 'PEEL', ['SOAK_3'], { lightLabel: 'Hư nhẹ → Ủ 3' }),
-  SOAK_3: stage('SOAK_3', 'Ủ 3', 'U3', 'A', 'PREPROCESS', 'soak', 'SORT_4'),
-  SORT_4: stage('SORT_4', 'Phân loại 4', 'P4', 'A', 'PREPROCESS', 'sort', 'PEEL'),
+  SORT_1: stage('SORT_1', 'Phân loại xuống xe', 'P1', 'A', 'PREPROCESS', 'sort', 'SOAK_1'),
+  SOAK_1: stage('SOAK_1', 'Ủ lần 1', 'U1', 'A', 'PREPROCESS', 'soak', 'SORT_SOAK_1', [], { partialExport: true }),
+  // 'grade': lựa sau ủ. Có thể xuất một phần; đạt + không đạt phải bằng số lượng xuất.
+  SORT_SOAK_1: stage('SORT_SOAK_1', 'Lựa sau ủ 1', 'L1', 'A', 'PREPROCESS', 'grade', 'PEEL', ['SOAK_2'], {
+    lightLabel: 'Không đạt → Ủ lần 2', lightName: 'Không đạt'
+  }),
+  SOAK_2: stage('SOAK_2', 'Ủ lần 2', 'U2', 'A', 'PREPROCESS', 'soak', 'SORT_SOAK_2', [], { optional: true }),
+  SORT_SOAK_2: stage('SORT_SOAK_2', 'Lựa sau ủ 2', 'L2', 'A', 'PREPROCESS', 'grade', 'PEEL', [], {
+    byproductLabel: 'Không đạt', byproductHint: 'Hao hụt, bỏ luôn', optional: true
+  }),
 
   PEEL: stage('PEEL', 'Gọt vỏ', 'GV', 'B', 'PROCESSING', 'process', 'FLESH', [], { byproductLabel: 'Vỏ' }),
   FLESH: stage('FLESH', 'Lạng má', 'LM', 'B', 'PROCESSING', 'process', 'CHECK_FLESH', [], { byproductLabel: 'Hạt' }),
@@ -71,9 +73,19 @@ function canOperate(stageDef, { role, departmentId }) {
   return Boolean(stageDef) && (isPrivileged(role) || (Boolean(departmentId) && departmentId === stageDef.departmentId));
 }
 
+/** Các công đoạn đã bị bỏ: lô còn kẹt ở đó được xem như đang ở công đoạn thay thế. */
+const LEGACY_STAGE_MAP = {
+  SORT_2: 'SORT_SOAK_1',
+  SORT_3: 'SORT_SOAK_1',
+  SORT_4: 'SORT_SOAK_1',
+  SOAK_1_1: 'SOAK_1',
+  SOAK_3: 'SOAK_2'
+};
+const normalizeStageId = (id) => LEGACY_STAGE_MAP[id] || id || null;
+
 /** Công đoạn hiện tại của lô; lô cũ chỉ có pendingStageId. */
 function getLotStageId(lot) {
-  return lot?.currentStage || lot?.pendingStageId || null;
+  return normalizeStageId(lot?.currentStage || lot?.pendingStageId || null);
 }
 
 /** Khối lượng đang có của lô; lô cũ chưa có currentKg thì lấy khối lượng nhập. */
@@ -84,24 +96,45 @@ function getLotInputKg(lot) {
 
 /**
  * Kiểm tra và tính kết quả một công đoạn (hàm thuần, không đụng Firestore).
- * Trả về { error } hoặc { inputKg, passedKg, rejectedHeavyKg, rejectedLightKg, lossKg, lightTarget, outcome }.
+ * Trả về { error } hoặc { inputKg, exportKg, remainderKg, passedKg, rejectedHeavyKg, rejectedLightKg, lossKg, lightTarget, outcome }.
  * outcome: passed (có phần đạt) | failed (không đạt nhưng còn phần hư nhẹ đi tiếp) | rejected (loại hết).
+ * Công đoạn 'grade' (lựa sau ủ): chỉ xử lý exportKg (mặc định toàn bộ), đạt + không đạt phải đúng bằng exportKg,
+ * phần còn lại (remainderKg) ở lại công đoạn. Không đạt đi ủ lại nếu có lightTo, ngược lại tính vào hao hụt và bỏ.
  */
 function evaluateStageResult(stageDef, lot, input) {
   const num = (value) => (value === undefined || value === null || value === '' ? 0 : Number(value));
   const inputKg = round3(Number(input.inputKg));
+  const isGrade = stageDef.kind === 'grade';
+  // Lựa sau ủ và Ủ lần 1 (hàng tồn) cho xuất một phần; phần chưa xuất ở lại công đoạn.
+  const usesExport = isGrade || Boolean(stageDef.partialExport);
+  const hasExport = input.exportKg !== undefined && input.exportKg !== null && input.exportKg !== '';
+  const exportKg = usesExport && hasExport ? round3(Number(input.exportKg)) : inputKg;
   const passedKg = round3(num(input.passedKg));
-  const rejectedHeavyKg = round3(num(input.rejectedHeavyKg));
+  let rejectedHeavyKg = round3(num(input.rejectedHeavyKg));
   const rejectedLightKg = round3(num(input.rejectedLightKg));
 
-  if (![inputKg, passedKg, rejectedHeavyKg, rejectedLightKg].every(Number.isFinite)
+  if (![inputKg, exportKg, passedKg, rejectedHeavyKg, rejectedLightKg].every(Number.isFinite)
     || passedKg < 0 || rejectedHeavyKg < 0 || rejectedLightKg < 0) {
     return { error: 'Khối lượng phải là số không âm.' };
   }
+  if (usesExport) {
+    if (exportKg <= 0) return { error: 'Nhập số lượng xuất lớn hơn 0.' };
+    if (exportKg > inputKg + KG_EPSILON) {
+      return { error: `Số lượng xuất (${exportKg} kg) vượt khối lượng đang có (${inputKg} kg).` };
+    }
+  }
   const total = round3(passedKg + rejectedHeavyKg + rejectedLightKg);
   if (total <= 0) return { error: 'Nhập ít nhất một khối lượng lớn hơn 0.' };
-  if (total > inputKg + KG_EPSILON) {
-    return { error: `Tổng đạt + hư nặng + hư nhẹ (${total} kg) vượt khối lượng vào (${inputKg} kg).` };
+  if (total > exportKg + KG_EPSILON) {
+    return { error: `Tổng đạt + hư nặng + hư nhẹ (${total} kg) vượt khối lượng vào (${exportKg} kg).` };
+  }
+  if (usesExport && Math.abs(total - exportKg) > KG_EPSILON) {
+    return { error: `Tổng đạt + không đạt (${total} kg) phải bằng số lượng xuất (${exportKg} kg).` };
+  }
+
+  const failsViaSoak = (stageDef.lightTo || []).length > 0;
+  if (isGrade && failsViaSoak && rejectedHeavyKg > 0) {
+    return { error: `Phần không đạt của ${stageDef.name} phải chuyển sang công đoạn ủ kế tiếp.` };
   }
 
   let lightTarget = null;
@@ -119,14 +152,19 @@ function evaluateStageResult(stageDef, lot, input) {
   }
 
   const outcome = passedKg > 0 ? 'passed' : rejectedLightKg > 0 ? 'failed' : 'rejected';
+  // Không đạt ở công đoạn không còn đường ủ lại: tính vào hao hụt và bỏ luôn.
+  const discardedKg = isGrade && !failsViaSoak ? rejectedHeavyKg : 0;
+  if (discardedKg > 0) rejectedHeavyKg = 0;
+  const remainderKg = Math.max(0, round3(inputKg - exportKg));
   return {
-    inputKg, passedKg, rejectedHeavyKg, rejectedLightKg,
-    lossKg: Math.max(0, round3(inputKg - total)),
+    inputKg, exportKg, remainderKg: remainderKg > KG_EPSILON ? remainderKg : 0,
+    passedKg, rejectedHeavyKg, rejectedLightKg,
+    lossKg: round3(Math.max(0, round3(exportKg - total)) + discardedKg),
     lightTarget, outcome
   };
 }
 
 module.exports = {
-  MAX_REWORK, INTAKE_STAGE_ID, KG_EPSILON, DEPARTMENTS, PHASES, STAGES, STAGE_ORDER,
+  MAX_REWORK, INTAKE_STAGE_ID, KG_EPSILON, DEPARTMENTS, PHASES, STAGES, STAGE_ORDER, LEGACY_STAGE_MAP, normalizeStageId,
   resolveDepartmentId, isPrivileged, canOperate, getLotStageId, getLotInputKg, evaluateStageResult, round3
 };

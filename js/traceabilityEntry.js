@@ -144,14 +144,6 @@ function isGeneratedLot(lot) {
   return Array.isArray(lot.parentLotIds) && lot.parentLotIds.length > 0;
 }
 
-/** Lô đã đi qua công đoạn sau Phân loại 1 hoặc đã tách ra lô con. */
-function isProcessedLot(lot) {
-  if (Number(lot.childCount) > 0) return true;
-  if (!isGeneratedLot(lot) && lot.currentStage && lot.currentStage !== INTAKE_STAGE_ID) return true;
-  if (lot.status && lot.status !== 'waiting') return true;
-  return (lot.history || []).some((entry) => entry.action !== 'CREATE' && entry.action !== 'SPLIT_FROM_PARENT');
-}
-
 /* ------------------------------------------------------------------ */
 /* Tiện ích                                                            */
 /* ------------------------------------------------------------------ */
@@ -347,7 +339,7 @@ function setSubmitting(submitting) {
   elements.submit.classList.toggle('is-loading', submitting);
   elements.submit.querySelector('.btn-label').textContent = submitting
     ? 'Đang tạo lô...'
-    : 'Tạo lô và đưa vào Phân loại 1';
+    : 'Tạo lô và đưa vào Phân loại xuống xe';
 }
 
 async function handleSubmit(event) {
@@ -376,7 +368,7 @@ async function handleSubmit(event) {
     const lotCode = result.data?.lotCode || values.lotCode;
     resetForm();
     fields.lotCode.input.focus();
-    showToast(`Đã tạo lô ${lotCode} và đưa vào hàng chờ Phân loại 1.`, 'success');
+    showToast(`Đã tạo lô ${lotCode} và đưa vào hàng chờ Phân loại xuống xe.`, 'success');
   } catch (error) {
     console.error('createIncomingLot failed:', error);
     const message = describeError(error, 'Không thể tạo lô. Vui lòng thử lại.');
@@ -535,8 +527,6 @@ function renderGeneratedList(hasFilter) {
   elements.generatedRows.append(fragment);
 }
 
-const PROCESSED_CONFIRM = 'Dữ liệu này đã được đưa đi phân loại. Bạn có chắc chắn muốn xóa?';
-
 /* ------------------------------------------------------------------ */
 /* Hộp thoại mật khẩu                                                  */
 /* ------------------------------------------------------------------ */
@@ -676,24 +666,15 @@ function handleDelete(lot) {
     showToast('Đang ngoại tuyến. Cần có mạng để xoá lô.', 'error');
     return;
   }
-  let force = isProcessedLot(lot);
-  const message = force ? `${PROCESSED_CONFIRM}\n\nLô: ${lotCode}` : `Xoá lô ${lotCode}?\nThao tác này không thể hoàn tác.`;
+  const message = `Xoá lô ${lotCode}?\nCác lô con và công đoạn sau của lô này cũng sẽ bị xoá. Thao tác này không thể hoàn tác.`;
   if (!window.confirm(message)) return;
 
   openPasswordDialog(
-    { title: `Xoá lô ${lotCode}`, message: 'Nhập mật khẩu xoá để tiếp tục.', currentLabel: 'Mật khẩu xoá', submitLabel: 'Xoá' },
+    { title: `Xoá lô ${lotCode}`, message: 'Nhập mật khẩu xoá để xoá lô và toàn bộ công đoạn sau.', currentLabel: 'Mật khẩu xoá', submitLabel: 'Xoá' },
     async ({ current }) => {
-      const attempt = () => deleteIncomingLot({ lotId: lot.id, force, password: current });
+      let result;
       try {
-        try {
-          await attempt();
-        } catch (error) {
-          // Máy chủ thấy lô đã qua công đoạn sau (dữ liệu trên màn hình cũ): hỏi lại rồi mới xoá.
-          if (force || error?.details?.reason !== 'LOT_PROCESSED') throw error;
-          if (!window.confirm(`${PROCESSED_CONFIRM}\n\nLô: ${lotCode}`)) throw new Error('Đã huỷ xoá.');
-          force = true;
-          await attempt();
-        }
+        result = await deleteIncomingLot({ lotId: lot.id, password: current });
       } catch (error) {
         if (error?.details?.reason === 'NO_DELETE_PASSWORD') {
           closePasswordDialog();
@@ -704,7 +685,8 @@ function handleDelete(lot) {
         console.error('deleteIncomingLot failed:', error);
         throw new Error(passwordErrorMessage(error, 'Không thể xoá lô. Vui lòng thử lại.'));
       }
-      showToast(`Đã xoá lô ${lotCode}.`, 'success');
+      const extra = Number(result?.data?.deletedLots) - 1;
+      showToast(extra > 0 ? `Đã xoá lô ${lotCode} và ${extra} lô ở công đoạn sau.` : `Đã xoá lô ${lotCode}.`, 'success');
     }
   );
 }

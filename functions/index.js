@@ -291,7 +291,7 @@ exports.createIncomingLot = functions.region('asia-southeast1').https.onCall(asy
 
   const lotCode = typeof data?.lotCode === 'string' ? data.lotCode.trim().toUpperCase() : '';
   const initialKg = Number(data?.initialKg);
-  const stageId = workflow.INTAKE_STAGE_ID; // Lô nhập hàng luôn bắt đầu ở Phân loại 1.
+  const stageId = workflow.INTAKE_STAGE_ID; // Lô nhập hàng luôn bắt đầu ở Phân loại xuống xe.
   if (!lotCode || !/^[A-Z0-9][A-Z0-9-]{2,79}$/.test(lotCode)) {
     throw new functions.https.HttpsError('invalid-argument', 'Mã lô chỉ dùng chữ in hoa, số và dấu gạch ngang.');
   }
@@ -387,9 +387,26 @@ exports.createIncomingLot = functions.region('asia-southeast1').https.onCall(asy
 
 /* ---- Mật khẩu xoá dữ liệu: lưu băm (scrypt + salt) trong Firestore, chỉ server đọc/ghi được ---- */
 const DELETE_PASSWORD_DOC = ['server_config', 'deleteProtection'];
+const DEFAULT_DELETE_PASSWORD = 'Chanhthu@2026';
 const MIN_PASSWORD_LENGTH = 4;
 
 const hashPassword = (password, salt) => crypto.scryptSync(password, salt, 64).toString('hex');
+
+async function ensureDefaultDeletePassword(db) {
+  const ref = db.collection(DELETE_PASSWORD_DOC[0]).doc(DELETE_PASSWORD_DOC[1]);
+  const snapshot = await ref.get();
+  if (snapshot.exists && snapshot.data()?.hash && snapshot.data()?.salt) {
+    return;
+  }
+
+  const salt = crypto.randomBytes(16).toString('hex');
+  await ref.set({
+    salt,
+    hash: hashPassword(DEFAULT_DELETE_PASSWORD, salt),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedBy: 'system-default'
+  });
+}
 
 async function assertPrivileged(db, context, message) {
   const userSnapshot = await db.collection('users').doc(context.auth.uid).get();
@@ -404,11 +421,19 @@ async function checkDeletePassword(db, password) {
   const snapshot = await db.collection(DELETE_PASSWORD_DOC[0]).doc(DELETE_PASSWORD_DOC[1]).get();
   const stored = snapshot.exists ? snapshot.data() : null;
   if (!stored?.hash || !stored?.salt) {
-    throw new functions.https.HttpsError(
-      'failed-precondition',
-      'Chưa đặt mật khẩu xoá. Admin hãy bấm "Đặt mật khẩu xoá" trước.',
-      { reason: 'NO_DELETE_PASSWORD' }
-    );
+    await ensureDefaultDeletePassword(db);
+    const defaultSalt = (await db.collection(DELETE_PASSWORD_DOC[0]).doc(DELETE_PASSWORD_DOC[1]).get()).data()?.salt;
+    if (!defaultSalt) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'Chưa đặt mật khẩu xoá. Admin hãy bấm "Đặt mật khẩu xoá" trước.',
+        { reason: 'NO_DELETE_PASSWORD' }
+      );
+    }
+    if (typeof password !== 'string' || !password) return false;
+    const expected = Buffer.from((await db.collection(DELETE_PASSWORD_DOC[0]).doc(DELETE_PASSWORD_DOC[1]).get()).data().hash, 'hex');
+    const actual = Buffer.from(hashPassword(password, defaultSalt), 'hex');
+    return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
   }
   if (typeof password !== 'string' || !password) return false;
   const expected = Buffer.from(stored.hash, 'hex');
@@ -461,11 +486,16 @@ exports.getDeletePasswordStatus = functions.region('asia-southeast1').https.onCa
   }
   const db = admin.firestore();
   await assertPrivileged(db, context, 'Chỉ admin hoặc dev mới xem được trạng thái này.');
-  const snapshot = await db.collection(DELETE_PASSWORD_DOC[0]).doc(DELETE_PASSWORD_DOC[1]).get();
-  return { configured: Boolean(snapshot.exists && snapshot.data()?.hash) };
+  const ref = db.collection(DELETE_PASSWORD_DOC[0]).doc(DELETE_PASSWORD_DOC[1]);
+  const snapshot = await ref.get();
+  if (!(snapshot.exists && snapshot.data()?.hash && snapshot.data()?.salt)) {
+    await ensureDefaultDeletePassword(db);
+  }
+  const finalSnapshot = await ref.get();
+  return { configured: Boolean(finalSnapshot.exists && finalSnapshot.data()?.hash) };
 });
 
-/** Deletes an incoming lot (admin/dev only, needs the delete password) together with its events. */
+/** Deletes an incoming lot (admin/dev only, needs the delete password) together with its events and every downstream (child) lot. */
 exports.deleteIncomingLot = functions.region('asia-southeast1').https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Bạn cần đăng nhập để xoá lô.');
@@ -478,37 +508,52 @@ exports.deleteIncomingLot = functions.region('asia-southeast1').https.onCall(asy
   const db = admin.firestore();
   await assertPrivileged(db, context, 'Chỉ admin hoặc dev mới được xoá lô.');
   await assertDeletePassword(db, data?.password);
+
   const lotRef = db.collection('lots').doc(lotId);
-  const [lotSnapshot, eventsSnapshot, childrenSnapshot] = await Promise.all([
-    lotRef.get(),
-    db.collection('stage_events').where('lotId', '==', lotId).get(),
-    db.collection('lots').where('parentLotIds', 'array-contains', lotId).limit(1).get()
-  ]);
+  const lotSnapshot = await lotRef.get();
   if (!lotSnapshot.exists) {
     throw new functions.https.HttpsError('not-found', 'Không tìm thấy lô cần xoá (có thể đã bị xoá).');
   }
-  // Lô đã đi qua công đoạn khác hoặc đã sinh lô con chỉ xoá khi người dùng đã xác nhận (force).
-  const lotData = lotSnapshot.data() || {};
-  const hasProcessing = eventsSnapshot.docs.some((doc) => doc.data().eventType !== 'LOT_CREATED')
-    || (lotData.history || []).some((entry) => entry.action !== 'CREATE' && entry.action !== 'SPLIT_FROM_PARENT')
-    || !childrenSnapshot.empty;
-  if (hasProcessing && data?.force !== true) {
-    throw new functions.https.HttpsError(
-      'failed-precondition',
-      'Dữ liệu này đã được đưa đi phân loại. Bạn có chắc chắn muốn xóa?',
-      { reason: 'LOT_PROCESSED' }
-    );
+
+  // Gom lô con theo từng tầng (lô con của lô con...) để xoá sạch các công đoạn sau.
+  const lotRefs = [lotRef];
+  const seen = new Set([lotId]);
+  let frontier = [lotId];
+  while (frontier.length) {
+    const next = [];
+    for (const parentId of frontier) {
+      const children = await db.collection('lots').where('parentLotIds', 'array-contains', parentId).get();
+      children.docs.forEach((doc) => {
+        if (seen.has(doc.id)) return;
+        seen.add(doc.id);
+        lotRefs.push(doc.ref);
+        next.push(doc.id);
+      });
+    }
+    frontier = next;
   }
 
-  const batch = db.batch();
-  eventsSnapshot.docs.forEach((doc) => batch.delete(doc.ref));
-  batch.delete(lotRef);
-  await batch.commit();
+  const refsToDelete = [...lotRefs];
+  for (const id of seen) {
+    const events = await db.collection('stage_events').where('lotId', '==', id).get();
+    events.docs.forEach((doc) => refsToDelete.push(doc.ref));
+  }
+
+  // Firestore giới hạn 500 thao tác mỗi batch.
+  for (let index = 0; index < refsToDelete.length; index += 450) {
+    const batch = db.batch();
+    refsToDelete.slice(index, index + 450).forEach((ref) => batch.delete(ref));
+    await batch.commit();
+  }
   functions.logger.info('Incoming lot deleted', {
-    lotId, lotCode: lotSnapshot.data()?.lotCode, processed: hasProcessing, by: context.auth.uid
+    lotId,
+    lotCode: lotSnapshot.data()?.lotCode,
+    deletedLots: lotRefs.length,
+    deletedDocuments: refsToDelete.length,
+    by: context.auth.uid
   });
 
-  return { lotId, lotCode: lotSnapshot.data()?.lotCode || '' };
+  return { lotId, lotCode: lotSnapshot.data()?.lotCode || '', deletedLots: lotRefs.length };
 });
 
 // Các hàm xử lý công đoạn: updateLotStage, sendToSoak, rejectLot.

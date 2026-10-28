@@ -9,6 +9,8 @@ import { KG_EPSILON, round3 } from '../workflow.js';
 export function createKgInputGroup({ onChange = () => {} } = {}) {
   let inputKg = 0;
   let lightOn = true;
+  let heavyOn = true;
+  let exactTotal = false;
   const element = el('div', 'kg-group');
 
   const makeField = (key, label, hint, tone) => {
@@ -66,6 +68,14 @@ export function createKgInputGroup({ onChange = () => {} } = {}) {
     if (requireAny && total <= 0) {
       return { valid: false, message: 'Nhập ít nhất một khối lượng lớn hơn 0.', total, lossKg: inputKg };
     }
+    if (exactTotal && requireAny && Math.abs(inputKg - total) > KG_EPSILON) {
+      return {
+        valid: false,
+        message: `Đạt + Không đạt phải bằng số lượng xuất ${formatKg(inputKg)} kg (còn thiếu ${formatKg(round3(inputKg - total))} kg).`,
+        total,
+        lossKg: 0
+      };
+    }
     return { valid: true, message: '', total, lossKg: Math.max(0, round3(inputKg - total)) };
   }
 
@@ -78,8 +88,13 @@ export function createKgInputGroup({ onChange = () => {} } = {}) {
     badSeg.style.width = `${pct(values.rejectedHeavyKg)}%`;
     warnSeg.style.width = `${pct(values.rejectedLightKg)}%`;
     bar.classList.toggle('kg-bar--over', !result.valid);
-    summary.textContent = `Khối lượng vào ${formatKg(inputKg)} kg · Đã nhập ${formatKg(result.total)} kg`
-      + (result.valid ? ` · Hao hụt ${formatKg(result.lossKg)} kg` : '');
+    if (exactTotal) {
+      summary.textContent = `Số lượng xuất ${formatKg(inputKg)} kg · Đã nhập ${formatKg(result.total)} kg`
+        + (result.valid ? ` · Còn lại ${formatKg(round3(inputKg - result.total))} kg` : '');
+    } else {
+      summary.textContent = `Khối lượng vào ${formatKg(inputKg)} kg · Đã nhập ${formatKg(result.total)} kg`
+        + (result.valid ? ` · Hao hụt ${formatKg(result.lossKg)} kg` : '');
+    }
     message.textContent = result.message;
     fields.forEach((field) => field.input.toggleAttribute('aria-invalid', !result.valid));
     onChange(result);
@@ -103,21 +118,36 @@ export function createKgInputGroup({ onChange = () => {} } = {}) {
       inputKg = Number.isFinite(kg) ? kg : 0;
       fields.forEach((field) => { field.input.disabled = !enabled; });
       light.input.disabled = !enabled || !lightOn;
+      heavy.input.disabled = !enabled || !heavyOn;
       fillButton.disabled = !enabled;
       render();
     },
+    /** Bật chế độ lựa sau ủ: tổng các ô phải đúng bằng khối lượng đặt ở setInputKg. */
+    setExactTotal(enabled) {
+      exactTotal = enabled;
+      render();
+    },
     /** Bật/tắt ô hư nhẹ (một số công đoạn không có đường ủ/làm lại). */
-    setLightEnabled(enabled, label) {
+    setLightEnabled(enabled, hint, name = 'Hư nhẹ') {
       lightOn = enabled;
       light.input.disabled = !enabled || passed.input.disabled;
       if (!enabled) light.input.value = '';
       light.box.classList.toggle('is-hidden', !enabled);
-      if (label) light.box.querySelector('.field-hint').textContent = label;
+      light.box.querySelector('.field-label').textContent = `${name} (kg)`;
+      if (hint) light.box.querySelector('.field-hint').textContent = hint;
       render();
     },
-    setByproductLabel(label) {
+    /** Bật/tắt ô hư nặng (lựa sau ủ 1 chỉ có Đạt / Không đạt → ủ lại). */
+    setHeavyEnabled(enabled) {
+      heavyOn = enabled;
+      heavy.input.disabled = !enabled || passed.input.disabled;
+      if (!enabled) heavy.input.value = '';
+      heavy.box.classList.toggle('is-hidden', !enabled);
+      render();
+    },
+    setByproductLabel(label, hint) {
       heavy.box.querySelector('.field-label').textContent = label ? `${label} (kg)` : 'Hư nặng (kg)';
-      heavy.box.querySelector('.field-hint').textContent = label ? 'Phụ phẩm' : 'Loại bỏ';
+      heavy.box.querySelector('.field-hint').textContent = label ? hint || 'Phụ phẩm' : 'Loại bỏ';
     },
     reset() {
       fields.forEach((field) => { field.input.value = ''; });

@@ -9,11 +9,11 @@ export type Role = 'staff' | 'admin' | 'dev';
 export type Phase = 'A' | 'B' | 'C';
 
 export type StageId =
-  | 'SORT_1' | 'SOAK_1' | 'SOAK_1_1' | 'SORT_2' | 'SOAK_2' | 'SORT_3' | 'SOAK_3' | 'SORT_4'
+  | 'SORT_1' | 'SOAK_1' | 'SORT_SOAK_1' | 'SOAK_2' | 'SORT_SOAK_2'
   | 'PEEL' | 'FLESH' | 'CHECK_FLESH' | 'SHAPE'
   | 'PACK';
 
-export type StageKind = 'sort' | 'soak' | 'wash' | 'process' | 'check' | 'freeze' | 'pack' | 'storage';
+export type StageKind = 'sort' | 'soak' | 'grade' | 'wash' | 'process' | 'check' | 'freeze' | 'pack' | 'storage';
 
 /** Trạng thái của một công đoạn trong một lô. */
 export type StageStatus = 'pending' | 'in_progress' | 'passed' | 'failed' | 'rejected';
@@ -32,7 +32,11 @@ export interface StageDefinition {
   lightTo: StageId[];       // Nơi nhận phần hư nhẹ (ủ / làm lại)
   rework: boolean;          // lightTo là vòng lặp, bị giới hạn MAX_REWORK
   lightLabel: string;
+  lightName?: string;       // Tên ô hư nhẹ trên phiếu, ví dụ "Không đạt"
   byproductLabel?: string;
+  byproductHint?: string;
+  optional?: boolean;       // Bước chỉ có khi lô đi qua (ủ lần 2), không vẽ sẵn trên timeline
+  partialExport?: boolean;  // Cho chuyển một phần sang bước sau, phần còn lại là hàng tồn ở lại (Ủ lần 1)
 }
 
 export interface Intake {
@@ -47,10 +51,12 @@ export interface Intake {
 /** Kết quả khối lượng của một lần ghi công đoạn. */
 export interface StageResult {
   inputKg: number;
+  exportKg?: number;        // Chỉ có ở công đoạn lựa sau ủ: số lượng xuất; đạt + không đạt = exportKg
+  remainderKg?: number;     // Phần chưa xuất, ở lại công đoạn
   passedKg: number;
   rejectedHeavyKg: number;  // Hư nặng → loại bỏ
-  rejectedLightKg: number;  // Hư nhẹ → ủ / làm lại
-  lossKg: number;           // Hao hụt = inputKg - tổng ba phần trên
+  rejectedLightKg: number;  // Hư nhẹ / không đạt → ủ / làm lại
+  lossKg: number;           // Hao hụt = phần chưa tính + không đạt bị bỏ ở lựa sau ủ 2
   soakTarget?: StageId;
   note: string;
 }
@@ -121,6 +127,7 @@ export interface UpdateLotStageRequest {
   passedKg: number;
   rejectedHeavyKg: number;
   rejectedLightKg: number;
+  exportKg?: number;                   // Bắt buộc với công đoạn lựa sau ủ (mặc định toàn bộ)
   soakTarget?: StageId;
   expectedInputKg?: number;
   note?: string;
@@ -148,5 +155,8 @@ export interface StageActionResponse {
   nextStage: StageId | null;
   completed: boolean;
   lossKg: number;
+  partial?: boolean;                   // Xuất một phần: lô chính ở lại công đoạn
+  remainderKg?: number;
   child: { id: string; lotCode: string; stageId: StageId } | null;
+  children?: { id: string; lotCode: string; stageId: StageId }[];
 }
