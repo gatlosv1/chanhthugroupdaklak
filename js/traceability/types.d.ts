@@ -56,6 +56,7 @@ export interface StageResult {
   passedKg: number;
   rejectedHeavyKg: number;  // Hư nặng → loại bỏ
   rejectedLightKg: number;  // Hư nhẹ / không đạt → ủ / làm lại
+  damagedKg?: number;       // Hỏng ở lựa sau ủ → hư hỏng, loại bỏ; đạt + không đạt + hỏng = exportKg
   lossKg: number;           // Hao hụt = phần chưa tính + không đạt bị bỏ ở lựa sau ủ 2
   soakTarget?: StageId;
   note: string;
@@ -73,7 +74,7 @@ export interface StageRecord {
 }
 
 export type HistoryAction =
-  | 'CREATE' | 'RECORD_RESULT' | 'SEND_TO_SOAK' | 'REJECT' | 'SPLIT_FROM_PARENT';
+  | 'CREATE' | 'RECORD_RESULT' | 'SEND_TO_SOAK' | 'REJECT' | 'COMPLETE_LOT' | 'SPLIT_FROM_PARENT';
 
 export interface HistoryEntry {
   stage: StageId;
@@ -127,6 +128,7 @@ export interface UpdateLotStageRequest {
   passedKg: number;
   rejectedHeavyKg: number;
   rejectedLightKg: number;
+  damagedKg?: number;                  // Chỉ ở công đoạn lựa sau ủ
   exportKg?: number;                   // Bắt buộc với công đoạn lựa sau ủ (mặc định toàn bộ)
   soakTarget?: StageId;
   expectedInputKg?: number;

@@ -74,12 +74,13 @@ function summarizeDaily(allLots, stageId, days) {
       if (!stageId) bucket(key).intake += Number(kg.initialKg) || 0;
       return;
     }
-    if (!['RECORD_RESULT', 'SEND_TO_SOAK', 'REJECT'].includes(entry.action)) return;
+    if (!['RECORD_RESULT', 'SEND_TO_SOAK', 'REJECT', 'COMPLETE_LOT'].includes(entry.action)) return;
     if (stageId && entry.stage !== stageId) return;
     const row = bucket(key);
     const countsPassed = stageId ? true : entry.stage === FINAL_STAGE_ID;
     if (countsPassed) row.passed += Number(kg.passedKg) || 0;
-    row.heavy += Number(kg.rejectedHeavyKg) || 0;
+    // Hỏng ở lựa sau ủ được tính chung vào cột hư hỏng.
+    row.heavy += (Number(kg.rejectedHeavyKg) || 0) + (Number(kg.damagedKg) || 0);
     row.light += Number(kg.rejectedLightKg) || 0;
     row.loss += Number(kg.lossKg) || 0;
   }));

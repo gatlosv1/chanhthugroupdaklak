@@ -244,6 +244,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid #b8ebd0; border-c
 .kg-field--ok { border-left-color: var(--green); }
 .kg-field--bad { border-left-color: var(--danger); }
 .kg-field--warn { border-left-color: var(--amber); }
+.kg-field--damaged { border-left-color: #7a1d1d; }
 .kg-field input { font-size: 20px; font-weight: 800; }
 .kg-fill { justify-self: start; min-height: 36px; }
 .kg-bar { display: flex; height: 10px; overflow: hidden; border-radius: 999px; background: #e6efeb; }
@@ -251,6 +252,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid #b8ebd0; border-c
 .kg-bar__seg--ok { background: var(--green); }
 .kg-bar__seg--bad { background: var(--danger); }
 .kg-bar__seg--warn { background: var(--amber); }
+.kg-bar__seg--damaged { background: #7a1d1d; }
 .kg-bar--over { outline: 2px solid var(--danger); }
 .kg-summary { color: var(--muted); font-size: 13px; }
 .kg-message { margin: 0; }

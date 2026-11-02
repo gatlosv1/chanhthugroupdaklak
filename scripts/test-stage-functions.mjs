@@ -60,7 +60,7 @@ Module._load = function (request, ...rest) {
   if (request === 'firebase-functions/v1') return fakeFunctions;
   return originalLoad.call(this, request, ...rest);
 };
-const { updateLotStage, sendToSoak, rejectLot } = require('../functions/traceability.js');
+const { updateLotStage, sendToSoak, rejectLot, completeLot } = require('../functions/traceability.js');
 
 /* ---------- Dữ liệu ---------- */
 const seedUser = (uid, data) => store.set(`users/${uid}`, data);
@@ -270,6 +270,51 @@ await test('lô đang kẹt ở Phân loại 2 (bản cũ) vẫn xử lý đư�
   const out = await updateLotStage({ lotId: 'stuck', stageId: 'SORT_SOAK_1', exportKg: 100, passedKg: 100 }, ctx('pre'));
   assert.equal(out.nextStage, 'PEEL');
   assert.equal(lot('stuck').currentStage, 'PEEL');
+});
+
+await test('Lựa sau ủ: số hỏng tính là hư hỏng, đạt + không đạt + hỏng phải bằng số xuất', async () => {
+  newLot('d1', { currentStage: 'SORT_SOAK_1', pendingStageId: 'SORT_SOAK_1' });
+  await rejects(updateLotStage({ lotId: 'd1', stageId: 'SORT_SOAK_1', exportKg: 100, passedKg: 60, rejectedLightKg: 30 }, ctx('pre')), 'invalid-argument');
+  const before = store.size;
+  const out = await updateLotStage({ lotId: 'd1', stageId: 'SORT_SOAK_1', exportKg: 100, passedKg: 60, rejectedLightKg: 30, damagedKg: 10 }, ctx('pre'));
+  assert.equal(out.nextStage, 'PEEL');
+  assert.equal(lot('d1').currentKg, 60);
+  assert.equal(lot(out.child.id).currentKg, 30);
+  assert.equal(store.size, before + 1);
+  assert.equal(lot('d1').history[0].kgData.damagedKg, 10);
+  assert.equal(out.lossKg, 0);
+  newLot('d2', { currentStage: 'SORT_SOAK_2', pendingStageId: 'SORT_SOAK_2' });
+  const out2 = await updateLotStage({ lotId: 'd2', stageId: 'SORT_SOAK_2', exportKg: 100, passedKg: 50, rejectedHeavyKg: 30, damagedKg: 20 }, ctx('pre'));
+  assert.equal(out2.lossKg, 30);
+  assert.equal(lot('d2').history[0].kgData.damagedKg, 20);
+  assert.equal(lot('d2').currentKg, 50);
+});
+
+await test('số hỏng chỉ nhập được ở công đoạn lựa sau ủ', async () => {
+  newLot('d3');
+  await rejects(updateLotStage({ lotId: 'd3', stageId: 'SORT_1', passedKg: 90, damagedKg: 10 }, ctx('pre')), 'invalid-argument');
+});
+
+await test('Hoàn thành lô ở Lựa sau ủ: đóng lô, không tạo lô mới, số còn lại tính hao hụt', async () => {
+  newLot('h1', { currentStage: 'SORT_SOAK_1', pendingStageId: 'SORT_SOAK_1' });
+  const part = await updateLotStage({ lotId: 'h1', stageId: 'SORT_SOAK_1', exportKg: 40, passedKg: 40 }, ctx('pre'));
+  assert.equal(part.remainderKg, 60);
+  const before = store.size;
+  const out = await completeLot({ lotId: 'h1', stageId: 'SORT_SOAK_1' }, ctx('pre'));
+  assert.equal(out.lotCompleted, true);
+  assert.equal(out.lossKg, 60);
+  assert.equal(store.size, before);
+  assert.equal(lot('h1').status, 'completed');
+  assert.equal(lot('h1').pendingStageId, null);
+  assert.equal(lot('h1').history.at(-1).action, 'COMPLETE_LOT');
+  assert.equal(lot('h1').history.at(-1).kgData.lossKg, 60);
+  await rejects(completeLot({ lotId: 'h1', stageId: 'SORT_SOAK_1' }, ctx('pre')), 'failed-precondition');
+  newLot('h2', { currentStage: 'SOAK_1', pendingStageId: 'SOAK_1' });
+  await rejects(completeLot({ lotId: 'h2', stageId: 'SOAK_1' }, ctx('pre')), 'failed-precondition');
+  newLot('h3', { currentStage: 'SORT_SOAK_2', pendingStageId: 'SORT_SOAK_2' });
+  await rejects(completeLot({ lotId: 'h3', stageId: 'SORT_SOAK_2' }, ctx('proc')), 'permission-denied');
+  await completeLot({ lotId: 'h3', stageId: 'SORT_SOAK_2' }, ctx('pre'));
+  assert.equal(lot('h3').status, 'completed');
 });
 
 console.log(`\n${count} test đạt.`);

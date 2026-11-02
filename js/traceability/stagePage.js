@@ -12,7 +12,7 @@ import {
   query,
   where
 } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
-import { rejectLot, sendToSoak, updateLotStage } from './api.js';
+import { completeLot, rejectLot, sendToSoak, updateLotStage } from './api.js';
 import { describeError, el, formatKg, setConnection, showToast, watchConnection } from './ui.js';
 import {
   DEPARTMENTS, PHASES, STAGES, STAGE_ORDER, canOperate, legacyIdsOf, resolveDepartmentId
@@ -55,7 +55,8 @@ const history = createHistoryTimeline();
 const form = createStageActionForm({
   onSubmit: (payload) => perform(updateLotStage, payload),
   onSendToSoak: (payload) => perform(sendToSoak, payload),
-  onReject: (payload) => perform(rejectLot, payload)
+  onReject: (payload) => perform(rejectLot, payload),
+  onComplete: (payload) => perform(completeLot, payload)
 });
 elements.selectorMount.append(selector.element);
 elements.progressMount.append(progress.element);
@@ -118,6 +119,7 @@ function startListening() {
 function summarize(result) {
   const next = STAGES[result.nextStage]?.name;
   const loss = result.lossKg > 0 ? ` Hao hụt ${formatKg(result.lossKg)} kg.` : '';
+  if (result.lotCompleted) return `Đã hoàn thành lô ${result.lotCode}.${loss}`;
   if (result.partial) {
     const outputs = (result.children || []).map((item) => `${item.lotCode} → ${stageLabel(item.stageId)}`).join('; ');
     return `Đã xuất một phần lô ${result.lotCode}${outputs ? `: ${outputs}` : ''}. Còn ${formatKg(result.remainderKg)} kg ở lại hàng chờ.${loss}`;

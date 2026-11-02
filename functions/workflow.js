@@ -98,8 +98,9 @@ function getLotInputKg(lot) {
  * Kiểm tra và tính kết quả một công đoạn (hàm thuần, không đụng Firestore).
  * Trả về { error } hoặc { inputKg, exportKg, remainderKg, passedKg, rejectedHeavyKg, rejectedLightKg, lossKg, lightTarget, outcome }.
  * outcome: passed (có phần đạt) | failed (không đạt nhưng còn phần hư nhẹ đi tiếp) | rejected (loại hết).
- * Công đoạn 'grade' (lựa sau ủ): chỉ xử lý exportKg (mặc định toàn bộ), đạt + không đạt phải đúng bằng exportKg,
+ * Công đoạn 'grade' (lựa sau ủ): chỉ xử lý exportKg (mặc định toàn bộ), đạt + không đạt + hỏng phải đúng bằng exportKg,
  * phần còn lại (remainderKg) ở lại công đoạn. Không đạt đi ủ lại nếu có lightTo, ngược lại tính vào hao hụt và bỏ.
+ * Hỏng (damagedKg) là hư hỏng, loại bỏ, chỉ nhập được ở công đoạn 'grade'.
  */
 function evaluateStageResult(stageDef, lot, input) {
   const num = (value) => (value === undefined || value === null || value === '' ? 0 : Number(value));
@@ -112,10 +113,15 @@ function evaluateStageResult(stageDef, lot, input) {
   const passedKg = round3(num(input.passedKg));
   let rejectedHeavyKg = round3(num(input.rejectedHeavyKg));
   const rejectedLightKg = round3(num(input.rejectedLightKg));
+  // Số hỏng chỉ nhập ở công đoạn lựa sau ủ; tính là hư hỏng và loại bỏ.
+  const damagedKg = round3(num(input.damagedKg));
 
-  if (![inputKg, exportKg, passedKg, rejectedHeavyKg, rejectedLightKg].every(Number.isFinite)
-    || passedKg < 0 || rejectedHeavyKg < 0 || rejectedLightKg < 0) {
+  if (![inputKg, exportKg, passedKg, rejectedHeavyKg, rejectedLightKg, damagedKg].every(Number.isFinite)
+    || passedKg < 0 || rejectedHeavyKg < 0 || rejectedLightKg < 0 || damagedKg < 0) {
     return { error: 'Khối lượng phải là số không âm.' };
+  }
+  if (damagedKg > 0 && !isGrade) {
+    return { error: `${stageDef.name} không nhập số hỏng. Hãy ghi vào hư nặng.` };
   }
   if (usesExport) {
     if (exportKg <= 0) return { error: 'Nhập số lượng xuất lớn hơn 0.' };
@@ -123,13 +129,13 @@ function evaluateStageResult(stageDef, lot, input) {
       return { error: `Số lượng xuất (${exportKg} kg) vượt khối lượng đang có (${inputKg} kg).` };
     }
   }
-  const total = round3(passedKg + rejectedHeavyKg + rejectedLightKg);
+  const total = round3(passedKg + rejectedHeavyKg + rejectedLightKg + damagedKg);
   if (total <= 0) return { error: 'Nhập ít nhất một khối lượng lớn hơn 0.' };
   if (total > exportKg + KG_EPSILON) {
-    return { error: `Tổng đạt + hư nặng + hư nhẹ (${total} kg) vượt khối lượng vào (${exportKg} kg).` };
+    return { error: `Tổng đạt + không đạt + hỏng (${total} kg) vượt khối lượng vào (${exportKg} kg).` };
   }
   if (usesExport && Math.abs(total - exportKg) > KG_EPSILON) {
-    return { error: `Tổng đạt + không đạt (${total} kg) phải bằng số lượng xuất (${exportKg} kg).` };
+    return { error: `Tổng đạt + không đạt${isGrade ? ' + hỏng' : ''} (${total} kg) phải bằng số lượng xuất (${exportKg} kg).` };
   }
 
   const failsViaSoak = (stageDef.lightTo || []).length > 0;
@@ -158,7 +164,7 @@ function evaluateStageResult(stageDef, lot, input) {
   const remainderKg = Math.max(0, round3(inputKg - exportKg));
   return {
     inputKg, exportKg, remainderKg: remainderKg > KG_EPSILON ? remainderKg : 0,
-    passedKg, rejectedHeavyKg, rejectedLightKg,
+    passedKg, rejectedHeavyKg, rejectedLightKg, damagedKg,
     lossKg: round3(Math.max(0, round3(exportKg - total)) + discardedKg),
     lightTarget, outcome
   };

@@ -39,8 +39,9 @@ function historyEntry(actor, fields) {
 }
 
 /**
- * Lõi xử lý một công đoạn, dùng chung cho updateLotStage / sendToSoak / rejectLot.
- * mode: 'update' (nhập tách kg) | 'soak' (chuyển cả lô sang hư nhẹ) | 'reject' (loại cả lô).
+ * Lõi xử lý một công đoạn, dùng chung cho updateLotStage / sendToSoak / rejectLot / completeLot.
+ * mode: 'update' (nhập tách kg) | 'soak' (chuyển cả lô sang hư nhẹ) | 'reject' (loại cả lô)
+ *       | 'complete' (hoàn thành lô ở công đoạn lựa sau ủ, số còn lại tính hao hụt, không tạo lô mới).
  * Chạy trong transaction để hai thiết bị không xử lý cùng một lô cùng lúc.
  */
 async function commitStageResult(data, context, mode) {
@@ -55,6 +56,9 @@ async function commitStageResult(data, context, mode) {
   if (!stageDef) throw new HttpsError('invalid-argument', `Công đoạn ${stageId || '(trống)'} không tồn tại.`);
   if (mode === 'reject' && note.length < 3) {
     throw new HttpsError('invalid-argument', 'Nhập lý do loại bỏ (tối thiểu 3 ký tự).');
+  }
+  if (mode === 'complete' && stageDef.kind !== 'grade') {
+    throw new HttpsError('failed-precondition', 'Chỉ hoàn thành lô được ở công đoạn Lựa sau ủ.');
   }
 
   const db = admin.firestore();
@@ -84,6 +88,41 @@ async function commitStageResult(data, context, mode) {
       throw new HttpsError('aborted', 'Khối lượng của lô vừa thay đổi. Hãy tải lại rồi nhập lại.');
     }
 
+    if (mode === 'complete') {
+      const now = admin.firestore.Timestamp.now();
+      const kgData = { inputKg, passedKg: 0, rejectedHeavyKg: 0, rejectedLightKg: 0, lossKg: inputKg, completed: true };
+      transaction.update(lotRef, {
+        [`stages.${stageId}`]: {
+          status: 'passed',
+          operatorId: actor.uid,
+          operatorName: actor.name,
+          departmentId: stageDef.departmentId,
+          startedAt: lot.stageEnteredAt || lot.createdAt || now,
+          finishedAt: now,
+          result: { ...kgData, note }
+        },
+        status: 'completed',
+        pendingStageId: null,
+        pendingDepartmentId: null,
+        currentKg: 0,
+        completedAt: now,
+        lastStageId: stageId,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        history: admin.firestore.FieldValue.arrayUnion(historyEntry(actor, {
+          stage: stageId,
+          action: 'COMPLETE_LOT',
+          fromStatus: 'pending',
+          toStatus: 'passed',
+          note,
+          kgData
+        }))
+      });
+      return {
+        lotId, lotCode: lot.lotCode || '', outcome: 'passed', nextStage: null, completed: false,
+        lotCompleted: true, lossKg: inputKg, partial: false, remainderKg: 0, child: null, children: []
+      };
+    }
+
     const requested = mode === 'soak'
       ? { passedKg: 0, rejectedHeavyKg: 0, rejectedLightKg: inputKg, soakTarget: text(data?.soakTarget, 50) }
       : mode === 'reject'
@@ -92,6 +131,7 @@ async function commitStageResult(data, context, mode) {
           passedKg: data?.passedKg,
           rejectedHeavyKg: data?.rejectedHeavyKg,
           rejectedLightKg: data?.rejectedLightKg,
+          damagedKg: data?.damagedKg,
           exportKg: data?.exportKg,
           soakTarget: text(data?.soakTarget, 50)
         };
@@ -110,6 +150,7 @@ async function commitStageResult(data, context, mode) {
       passedKg: result.passedKg,
       rejectedHeavyKg: result.rejectedHeavyKg,
       rejectedLightKg: result.rejectedLightKg,
+      ...(result.damagedKg > 0 ? { damagedKg: result.damagedKg } : {}),
       lossKg: result.lossKg
     };
     const stageRecord = {
@@ -252,3 +293,6 @@ exports.sendToSoak = functions.region(REGION).https.onCall((data, context) => co
 
 /** Loại bỏ toàn bộ lô (bắt buộc ghi lý do). */
 exports.rejectLot = functions.region(REGION).https.onCall((data, context) => commitStageResult(data, context, 'reject'));
+
+/** Hoàn thành lô ở công đoạn Lựa sau ủ: đóng lô, số kg còn lại tính hao hụt, không tạo lô mới. */
+exports.completeLot = functions.region(REGION).https.onCall((data, context) => commitStageResult(data, context, 'complete'));

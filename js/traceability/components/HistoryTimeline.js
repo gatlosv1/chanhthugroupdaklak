@@ -6,6 +6,7 @@ const ACTION_LABELS = {
   RECORD_RESULT: { text: 'Ghi kết quả', tone: 'ok' },
   SEND_TO_SOAK: { text: 'Chuyển ủ / làm lại', tone: 'warn' },
   REJECT: { text: 'Loại bỏ', tone: 'bad' },
+  COMPLETE_LOT: { text: 'Hoàn thành lô', tone: 'ok' },
   SPLIT_FROM_PARENT: { text: 'Tách từ lô mẹ', tone: 'warn' }
 };
 
@@ -18,6 +19,7 @@ function describeKg(kg = {}) {
   if (kg.passedKg) parts.push(`đạt ${formatKg(kg.passedKg)}`);
   if (kg.rejectedLightKg) parts.push(`hư nhẹ ${formatKg(kg.rejectedLightKg)}`);
   if (kg.rejectedHeavyKg) parts.push(`hư nặng ${formatKg(kg.rejectedHeavyKg)}`);
+  if (kg.damagedKg) parts.push(`hỏng ${formatKg(kg.damagedKg)}`);
   if (kg.lossKg) parts.push(`hao hụt ${formatKg(kg.lossKg)}`);
   if (kg.lightKg) parts.push(`${formatKg(kg.lightKg)} kg`);
   return parts.join(' · ');

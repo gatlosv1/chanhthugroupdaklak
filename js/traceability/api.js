@@ -14,3 +14,5 @@ export const updateLotStage = callable('updateLotStage');
 export const sendToSoak = callable('sendToSoak');
 /** Loại bỏ cả lô (cần lý do). */
 export const rejectLot = callable('rejectLot');
+/** Hoàn thành lô ở Lựa sau ủ (không tạo lô mới). */
+export const completeLot = callable('completeLot');

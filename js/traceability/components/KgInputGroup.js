@@ -2,14 +2,15 @@ import { el, formatKg } from '../ui.js';
 import { KG_EPSILON, round3 } from '../workflow.js';
 
 /**
- * KgInputGroup: ba ô nhập khối lượng (đạt / hư nặng / hư nhẹ) kèm thanh tổng kết trực quan
- * và kiểm tra passed + heavy + light ≤ inputKg ngay khi gõ.
+ * KgInputGroup: các ô nhập khối lượng (đạt / hư nặng / hư nhẹ, thêm "hỏng" ở lựa sau ủ) kèm thanh tổng kết trực quan
+ * và kiểm tra tổng các ô ≤ inputKg ngay khi gõ.
  * onChange(validation) được gọi mỗi khi giá trị thay đổi.
  */
 export function createKgInputGroup({ onChange = () => {} } = {}) {
   let inputKg = 0;
   let lightOn = true;
   let heavyOn = true;
+  let damagedOn = false;
   let exactTotal = false;
   const element = el('div', 'kg-group');
 
@@ -30,13 +31,16 @@ export function createKgInputGroup({ onChange = () => {} } = {}) {
   const passed = makeField('passedKg', 'Đạt (kg)', 'Đi tiếp công đoạn sau', 'ok');
   const heavy = makeField('rejectedHeavyKg', 'Hư nặng (kg)', 'Loại bỏ', 'bad');
   const light = makeField('rejectedLightKg', 'Hư nhẹ (kg)', 'Ủ / làm lại', 'warn');
-  const fields = [passed, heavy, light];
+  const damaged = makeField('damagedKg', 'Hỏng (kg)', 'Hư hỏng, loại bỏ', 'damaged');
+  damaged.box.classList.add('is-hidden');
+  const fields = [passed, heavy, light, damaged];
 
   const fillButton = el('button', 'ghost-action kg-fill', { type: 'button', textContent: 'Đạt toàn bộ', disabled: true });
   const bar = el('div', 'kg-bar', {}, [
     el('span', 'kg-bar__seg kg-bar__seg--ok'),
     el('span', 'kg-bar__seg kg-bar__seg--bad'),
-    el('span', 'kg-bar__seg kg-bar__seg--warn')
+    el('span', 'kg-bar__seg kg-bar__seg--warn'),
+    el('span', 'kg-bar__seg kg-bar__seg--damaged')
   ]);
   const summary = el('div', 'kg-summary');
   const message = el('p', 'field-error kg-message', { role: 'alert' });
@@ -51,7 +55,9 @@ export function createKgInputGroup({ onChange = () => {} } = {}) {
       const raw = field.input.value.trim();
       return raw === '' ? 0 : Number(raw);
     };
-    return { passedKg: read(passed), rejectedHeavyKg: read(heavy), rejectedLightKg: read(light) };
+    return {
+      passedKg: read(passed), rejectedHeavyKg: read(heavy), rejectedLightKg: read(light), damagedKg: read(damaged)
+    };
   }
 
   /** Trả về { valid, message, total, lossKg }. */
@@ -71,7 +77,7 @@ export function createKgInputGroup({ onChange = () => {} } = {}) {
     if (exactTotal && requireAny && Math.abs(inputKg - total) > KG_EPSILON) {
       return {
         valid: false,
-        message: `Đạt + Không đạt phải bằng số lượng xuất ${formatKg(inputKg)} kg (còn thiếu ${formatKg(round3(inputKg - total))} kg).`,
+        message: `Đạt + Không đạt${damagedOn ? ' + Hỏng' : ''} phải bằng số lượng xuất ${formatKg(inputKg)} kg (còn thiếu ${formatKg(round3(inputKg - total))} kg).`,
         total,
         lossKg: 0
       };
@@ -83,10 +89,11 @@ export function createKgInputGroup({ onChange = () => {} } = {}) {
     const values = getValues();
     const result = validate({ requireAny: false });
     const pct = (kg) => (inputKg > 0 && Number.isFinite(kg) ? Math.min(100, (kg / inputKg) * 100) : 0);
-    const [okSeg, badSeg, warnSeg] = bar.children;
+    const [okSeg, badSeg, warnSeg, damagedSeg] = bar.children;
     okSeg.style.width = `${pct(values.passedKg)}%`;
     badSeg.style.width = `${pct(values.rejectedHeavyKg)}%`;
     warnSeg.style.width = `${pct(values.rejectedLightKg)}%`;
+    damagedSeg.style.width = `${pct(values.damagedKg)}%`;
     bar.classList.toggle('kg-bar--over', !result.valid);
     if (exactTotal) {
       summary.textContent = `Số lượng xuất ${formatKg(inputKg)} kg · Đã nhập ${formatKg(result.total)} kg`
@@ -105,6 +112,7 @@ export function createKgInputGroup({ onChange = () => {} } = {}) {
     passed.input.value = String(inputKg);
     heavy.input.value = '';
     light.input.value = '';
+    damaged.input.value = '';
     render();
   });
 
@@ -119,7 +127,16 @@ export function createKgInputGroup({ onChange = () => {} } = {}) {
       fields.forEach((field) => { field.input.disabled = !enabled; });
       light.input.disabled = !enabled || !lightOn;
       heavy.input.disabled = !enabled || !heavyOn;
+      damaged.input.disabled = !enabled || !damagedOn;
       fillButton.disabled = !enabled;
+      render();
+    },
+    /** Bật/tắt ô "Hỏng" (chỉ dùng ở công đoạn lựa sau ủ). */
+    setDamagedEnabled(enabled) {
+      damagedOn = enabled;
+      damaged.input.disabled = !enabled || passed.input.disabled;
+      if (!enabled) damaged.input.value = '';
+      damaged.box.classList.toggle('is-hidden', !enabled);
       render();
     },
     /** Bật chế độ lựa sau ủ: tổng các ô phải đúng bằng khối lượng đặt ở setInputKg. */

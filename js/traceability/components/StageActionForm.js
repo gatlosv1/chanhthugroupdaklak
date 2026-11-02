@@ -11,7 +11,7 @@ import { createKgInputGroup } from './KgInputGroup.js';
  *  - "Chuyển cả lô sang ủ / làm lại" và "Loại bỏ cả lô" là thao tác nhanh có xác nhận.
  * Các callback trả Promise; form tự khoá nút trong lúc chờ. Việc hiện toast/lỗi do trang gọi lo.
  */
-export function createStageActionForm({ onSubmit, onSendToSoak, onReject }) {
+export function createStageActionForm({ onSubmit, onSendToSoak, onReject, onComplete }) {
   let stage = null;
   let lot = null;
   let busy = false;
@@ -49,7 +49,8 @@ export function createStageActionForm({ onSubmit, onSendToSoak, onReject }) {
   const submit = el('button', 'primary-action', { type: 'submit' }, [el('span', 'btn-spinner'), submitLabel]);
   const soakButton = el('button', 'secondary-action', { type: 'button' });
   const rejectButton = el('button', 'danger-action danger-action--wide', { type: 'button', textContent: 'Loại bỏ cả lô' });
-  const quick = el('div', 'action-quick', {}, [soakButton, rejectButton]);
+  const completeButton = el('button', 'secondary-action is-hidden', { type: 'button', textContent: 'Hoàn thành lô' });
+  const quick = el('div', 'action-quick', {}, [soakButton, completeButton, rejectButton]);
 
   const element = el('form', 'stage-action-form', { noValidate: true }, [
     title, subtitle, nextBox, exportBox, kg.element, targetField, noteField, message, submit, quick
@@ -90,6 +91,8 @@ export function createStageActionForm({ onSubmit, onSendToSoak, onReject }) {
       rows.push(stage.lightTo.length
         ? [`Không đạt → ${STAGES[stage.lightTo[0]].name}`, 'warn']
         : ['Không đạt → Hao hụt, bỏ luôn', 'bad']);
+      rows.push(['Hỏng → Hư hỏng, loại bỏ', 'bad']);
+      rows.push(['Hoàn thành lô → Đóng lô, không tạo lô mới', '']);
     } else {
       rows.push([`Đạt → ${nextName}`, '']);
       if (stage.lightTo.length) rows.push([stage.lightLabel, 'warn']);
@@ -147,6 +150,7 @@ export function createStageActionForm({ onSubmit, onSendToSoak, onReject }) {
     if (isSoak()) submit.disabled = !ready || (isStockSoak() && exportKg === null);
     else submit.disabled = !ready || (isGrade() && exportKg === null) || !kg.validate().valid;
     soakButton.disabled = !ready;
+    completeButton.disabled = !ready;
     rejectButton.disabled = !ready;
     exportAllButton.disabled = !ready;
     exportPartialButton.disabled = !ready;
@@ -244,6 +248,14 @@ export function createStageActionForm({ onSubmit, onSendToSoak, onReject }) {
     run(() => onSendToSoak({ ...basePayload(), soakTarget: selectedTarget() }));
   });
 
+  completeButton.addEventListener('click', () => {
+    if (!stage || !lot || busy || !isGrade()) return;
+    const remaining = getLotInputKg(lot);
+    const text = `Hoàn thành lô ${lot.lotCode}?\nLô sẽ đóng lại, không tạo lô mới. Số còn lại ${formatKg(remaining)} kg được tính là hao hụt. Không thể hoàn tác.`;
+    if (!window.confirm(text)) return;
+    run(() => onComplete(basePayload()));
+  });
+
   rejectButton.addEventListener('click', () => {
     if (!stage || !lot || busy) return;
     if (note.value.trim().length < 3) {
@@ -286,9 +298,11 @@ export function createStageActionForm({ onSubmit, onSendToSoak, onReject }) {
       kg.element.classList.toggle('is-hidden', soak);
       kg.setLightEnabled(hasLight, stage?.lightLabel, stage?.lightName);
       kg.setHeavyEnabled(!grade || !stage.lightTo.length);
+      kg.setDamagedEnabled(grade);
       kg.setByproductLabel(stage?.byproductLabel || '', stage?.byproductHint);
       note.disabled = !hasLot;
       soakButton.classList.toggle('is-hidden', !hasLight || grade);
+      completeButton.classList.toggle('is-hidden', !grade);
       rejectButton.classList.toggle('is-hidden', soak || grade);
       targetField.classList.toggle('is-hidden', !(hasLight && stage.lightTo.length > 1));
       if (hasLight) {
