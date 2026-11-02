@@ -53,7 +53,7 @@ export function createStageActionForm({ onSubmit, onSendToSoak, onReject, onComp
   const quick = el('div', 'action-quick', {}, [soakButton, completeButton, rejectButton]);
 
   const element = el('form', 'stage-action-form', { noValidate: true }, [
-    title, subtitle, nextBox, exportBox, kg.element, targetField, noteField, message, submit, quick
+    title, subtitle, nextBox, kg.damagedElement, exportBox, kg.element, targetField, noteField, message, submit, quick
   ]);
 
   const isSoak = () => stage?.kind === 'soak';
@@ -110,7 +110,7 @@ export function createStageActionForm({ onSubmit, onSendToSoak, onReject, onComp
     const hasLot = Boolean(stage && lot);
     if (isGrade()) {
       kg.setExactTotal(true);
-      kg.setInputKg(exportKg ?? 0, hasLot && exportKg !== null);
+      kg.setInputKg(exportKg ?? 0, hasLot && exportKg !== null, { damagedEnabled: hasLot });
       return;
     }
     kg.setExactTotal(false);
@@ -138,7 +138,7 @@ export function createStageActionForm({ onSubmit, onSendToSoak, onReject, onComp
   function lockExport(value) {
     exportKg = value;
     exportInput.value = String(value);
-    kg.reset();
+    kg.reset({ keepDamaged: true });
     applyKgState();
     renderExportStatus();
     syncSubmitState();
@@ -177,7 +177,7 @@ export function createStageActionForm({ onSubmit, onSendToSoak, onReject, onComp
   exportInput.addEventListener('input', () => {
     if (exportKg === null) return;
     exportKg = null;
-    kg.reset();
+    kg.reset({ keepDamaged: true });
     applyKgState();
     renderExportStatus();
     syncSubmitState();
@@ -298,7 +298,7 @@ export function createStageActionForm({ onSubmit, onSendToSoak, onReject, onComp
       kg.element.classList.toggle('is-hidden', soak);
       kg.setLightEnabled(hasLight, stage?.lightLabel, stage?.lightName);
       kg.setHeavyEnabled(!grade || !stage.lightTo.length);
-      kg.setDamagedEnabled(grade);
+      kg.setDamagedEnabled(grade && hasLot);
       kg.setByproductLabel(stage?.byproductLabel || '', stage?.byproductHint);
       note.disabled = !hasLot;
       soakButton.classList.toggle('is-hidden', !hasLight || grade);

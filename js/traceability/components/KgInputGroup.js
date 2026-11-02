@@ -11,6 +11,7 @@ export function createKgInputGroup({ onChange = () => {} } = {}) {
   let lightOn = true;
   let heavyOn = true;
   let damagedOn = false;
+  let damagedActive = false;
   let exactTotal = false;
   const element = el('div', 'kg-group');
 
@@ -46,7 +47,7 @@ export function createKgInputGroup({ onChange = () => {} } = {}) {
   const message = el('p', 'field-error kg-message', { role: 'alert' });
 
   element.append(
-    el('div', 'kg-fields', {}, fields.map((field) => field.box)),
+    el('div', 'kg-fields', {}, fields.filter((field) => field !== damaged).map((field) => field.box)),
     fillButton, bar, summary, message
   );
 
@@ -102,7 +103,7 @@ export function createKgInputGroup({ onChange = () => {} } = {}) {
       summary.textContent = `Khối lượng vào ${formatKg(inputKg)} kg · Đã nhập ${formatKg(result.total)} kg`
         + (result.valid ? ` · Hao hụt ${formatKg(result.lossKg)} kg` : '');
     }
-    message.textContent = result.message;
+    message.textContent = exactTotal && inputKg <= 0 ? '' : result.message;
     fields.forEach((field) => field.input.toggleAttribute('aria-invalid', !result.valid));
     onChange(result);
   }
@@ -118,23 +119,26 @@ export function createKgInputGroup({ onChange = () => {} } = {}) {
 
   return {
     element,
+    /** Ô "Hỏng" đứng riêng để form đặt ở vị trí khác (phía trên ô số lượng xuất). */
+    damagedElement: damaged.box,
     getValues,
     validate,
     focus: () => passed.input.focus(),
-    /** Đặt khối lượng vào của lô và bật/tắt cả nhóm. */
-    setInputKg(kg, enabled = true) {
+    /** Đặt khối lượng vào của lô và bật/tắt cả nhóm; ô "Hỏng" có thể bật độc lập qua damagedEnabled. */
+    setInputKg(kg, enabled = true, { damagedEnabled = enabled } = {}) {
       inputKg = Number.isFinite(kg) ? kg : 0;
+      damagedActive = damagedEnabled;
       fields.forEach((field) => { field.input.disabled = !enabled; });
       light.input.disabled = !enabled || !lightOn;
       heavy.input.disabled = !enabled || !heavyOn;
-      damaged.input.disabled = !enabled || !damagedOn;
+      damaged.input.disabled = !damagedActive || !damagedOn;
       fillButton.disabled = !enabled;
       render();
     },
     /** Bật/tắt ô "Hỏng" (chỉ dùng ở công đoạn lựa sau ủ). */
     setDamagedEnabled(enabled) {
       damagedOn = enabled;
-      damaged.input.disabled = !enabled || passed.input.disabled;
+      damaged.input.disabled = !enabled || !damagedActive;
       if (!enabled) damaged.input.value = '';
       damaged.box.classList.toggle('is-hidden', !enabled);
       render();
@@ -166,8 +170,12 @@ export function createKgInputGroup({ onChange = () => {} } = {}) {
       heavy.box.querySelector('.field-label').textContent = label ? `${label} (kg)` : 'Hư nặng (kg)';
       heavy.box.querySelector('.field-hint').textContent = label ? hint || 'Phụ phẩm' : 'Loại bỏ';
     },
-    reset() {
-      fields.forEach((field) => { field.input.value = ''; });
+    /** Xoá các ô đã nhập; keepDamaged giữ lại số hỏng (đổi số lượng xuất không làm mất số hỏng). */
+    reset({ keepDamaged = false } = {}) {
+      fields.forEach((field) => {
+        if (keepDamaged && field === damaged) return;
+        field.input.value = '';
+      });
       render();
     }
   };
