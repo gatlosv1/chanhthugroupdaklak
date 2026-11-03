@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quản lý IP / UID bị cấm - Chánh Thu</title>
+    <link rel="stylesheet" href="./css/ban-manager.css" />
+  </head>
+  <body>
+    <header class="bm-header">
+      <a class="bm-brand" href="./dashboard.html" aria-label="Về dashboard">
+        <img src="./images/Logo.png" alt="Chánh Thu" />
+        <span>
+          <strong>CHÁNH THU</strong>
+          <small>Developer</small>
+        </span>
+      </a>
+      <nav class="bm-nav" aria-label="Điều hướng">
+        <a href="./dashboard.html">Dashboard</a>
+        <a href="./dev-manager.html">Developer Manager</a>
+        <a href="./ban-manager.html" aria-current="page">IP bị cấm</a>
+      </nav>
+      <div class="bm-user"><span id="currentUser">-</span></div>
+    </header>
+
+    <main class="bm-main">
+      <section class="bm-heading">
+        <p>Bảo mật · Giới hạn tốc độ</p>
+        <h1>Quản lý IP / UID bị cấm</h1>
+        <p class="bm-rules">
+          Ghi (thêm, sửa, xoá...) từ 6 request trong 5 giây, hoặc Đọc từ 12 request trong 5 giây là vi phạm.
+          Lần 1 cấm 30 phút, lần 2 cấm 2 giờ, lần 3 cấm 6 giờ, lần 4 cấm 24 giờ, từ lần 5 khoá đến khi dev gỡ.
+        </p>
+      </section>
+
+      <section id="denied" class="bm-notice bm-notice--error is-hidden" role="alert">
+        <strong>Không có quyền truy cập</strong>
+        <span id="deniedMessage">Chỉ tài khoản dev mới được dùng trang này.</span>
+      </section>
+
+      <section id="panel" class="bm-panel is-hidden">
+        <div class="bm-toolbar">
+          <label class="bm-search">
+            <span class="bm-sr">Tìm kiếm</span>
+            <input id="searchInput" type="search" placeholder="Tìm theo IP hoặc UID..." autocomplete="off" />
+          </label>
+          <label class="bm-check">
+            <input id="includeExpired" type="checkbox" />
+            <span>Hiện cả mục đã hết hạn cấm</span>
+          </label>
+          <button id="refreshBtn" class="bm-btn" type="button">Làm mới</button>
+        </div>
+
+        <p id="summary" class="bm-summary" aria-live="polite">Đang tải...</p>
+        <p id="errorMessage" class="bm-error is-hidden" role="alert"></p>
+
+        <div class="bm-table-wrap">
+          <table class="bm-table">
+            <thead>
+              <tr>
+                <th>Loại</th>
+                <th>IP / UID</th>
+                <th class="num">Số lần bị cấm</th>
+                <th>Thời điểm bị cấm</th>
+                <th>Thời điểm hết cấm</th>
+                <th>Thời gian còn lại</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="banRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <div id="toastRegion" class="bm-toasts" role="status" aria-live="polite"></div>
+
+    <script type="module" src="./js/banManager.js"></script>
+  </body>
+</html>

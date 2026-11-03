@@ -475,6 +475,9 @@ function renderProfile(user, profile) {
   const canManageUsers = hasUserManagementPermission(role, currentUserPermissions);
   const userManagementSection = document.getElementById('userManagementSection');
   userManagementSection?.classList.toggle('d-none', !canManageUsers);
+  document.querySelectorAll('[data-dev-only]').forEach((item) => {
+    item.classList.toggle('d-none', role !== 'dev');
+  });
 
   document.querySelectorAll('[data-page-access]').forEach((card) => {
     const pageKey = card.dataset.pageAccess;

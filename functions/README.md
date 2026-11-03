@@ -92,3 +92,16 @@ Example body:
   "reportDate": "2026-09-11"
 }
 ```
+
+## 6) Rate limit và quản lý IP/UID bị cấm
+
+Mọi callable ghi/đọc và hai endpoint HTTP đi qua `functions/rateLimit.js`:
+
+- Định danh: UID nếu đã đăng nhập, ngược lại IP (lấy từ `x-forwarded-for`, xem `TRUSTED_PROXY_HOPS`).
+- Thao tác Ghi: từ 6 request trong 5 giây là vi phạm. Thao tác Đọc: từ 12 request trong 5 giây.
+- Vi phạm lần 1 cấm 30 phút, lần 2 cấm 2 giờ, lần 3 cấm 6 giờ, lần 4 cấm 24 giờ, từ lần 5 khoá đến khi dev gỡ.
+- Đang bị cấm: trả HTTP 429 (`resource-exhausted`) kèm thời gian còn lại.
+- Trạng thái lưu ở Firestore `rate_limits/{uid_<uid> | ip_<ip>}`; chỉ Cloud Functions đọc/ghi được.
+- Trang `ban-manager.html` (chỉ dev) xem danh sách và gỡ cấm qua `listRateLimitBans` / `unbanRateLimit`.
+- Chỉ request đi qua Cloud Functions được giới hạn. Thao tác Firestore trực tiếp từ trình duyệt thì không.
+- Đặt `RATE_LIMIT_DISABLED=1` trong `functions/.env` để tắt khẩn cấp. Kiểm tra: `node scripts/test-rate-limit.mjs`.

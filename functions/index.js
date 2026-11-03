@@ -4,6 +4,7 @@ const nodemailer = require('nodemailer');
 const cors = require('cors');
 const workflow = require('./workflow');
 const crypto = require('crypto');
+const rateLimit = require('./rateLimit');
 
 admin.initializeApp();
 
@@ -56,6 +57,8 @@ exports.zapierWebhook = functions.region('asia-southeast1').https.onRequest((req
       return;
     }
 
+    if (await rateLimit.guardHttp('write', req, res)) return;
+
     const token = getBearerToken(req);
     if (!token || token !== ZAPIER_SECRET) {
       res.status(401).json({ ok: false, message: 'Unauthorized: invalid or missing Authorization bearer token' });
@@ -100,6 +103,8 @@ exports.sendProductionReport = functions.region('asia-southeast1').https.onReque
       res.status(405).json({ ok: false, message: 'Method not allowed' });
       return;
     }
+
+    if (await rateLimit.guardHttp('write', req, res)) return;
 
     try {
       const { recipients, subject, html, reportDate, senderEmail } = req.body || {};
@@ -218,7 +223,7 @@ exports.onStageEventCreated = functions.region('asia-southeast1')
  * Trusted write boundary for append-only production events. Clients cannot
  * write stage_events directly; their authenticated UID becomes operatorId.
  */
-exports.recordStageEvent = functions.region('asia-southeast1').https.onCall(async (data, context) => {
+exports.recordStageEvent = functions.region('asia-southeast1').https.onCall(rateLimit.withRateLimit('write', async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Bạn cần đăng nhập để ghi nhận công đoạn.');
   }
@@ -281,10 +286,10 @@ exports.recordStageEvent = functions.region('asia-southeast1').https.onCall(asyn
   });
 
   return { eventId: eventRef.id };
-});
+}));
 
 /** Creates a new incoming lot at the first sorting stage and appends its creation event. */
-exports.createIncomingLot = functions.region('asia-southeast1').https.onCall(async (data, context) => {
+exports.createIncomingLot = functions.region('asia-southeast1').https.onCall(rateLimit.withRateLimit('write', async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Bạn cần đăng nhập để tạo lô.');
   }
@@ -383,7 +388,7 @@ exports.createIncomingLot = functions.region('asia-southeast1').https.onCall(asy
   });
 
   return { lotId: lotRef.id, eventId: eventRef.id, lotCode };
-});
+}));
 
 /* ---- Mật khẩu xoá dữ liệu: lưu băm (scrypt + salt) trong Firestore, chỉ server đọc/ghi được ---- */
 const DELETE_PASSWORD_DOC = ['server_config', 'deleteProtection'];
@@ -448,7 +453,7 @@ async function assertDeletePassword(db, password) {
 }
 
 /** Đặt hoặc đổi mật khẩu xoá (admin/dev). Đổi mật khẩu cần nhập mật khẩu hiện tại. */
-exports.setDeletePassword = functions.region('asia-southeast1').https.onCall(async (data, context) => {
+exports.setDeletePassword = functions.region('asia-southeast1').https.onCall(rateLimit.withRateLimit('write', async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Bạn cần đăng nhập.');
   }
@@ -477,10 +482,10 @@ exports.setDeletePassword = functions.region('asia-southeast1').https.onCall(asy
   });
   functions.logger.info('Delete password updated', { by: context.auth.uid });
   return { ok: true, changed: existing.exists && Boolean(existing.data()?.hash) };
-});
+}));
 
 /** Cho giao diện biết đã có mật khẩu xoá chưa (không trả về băm). */
-exports.getDeletePasswordStatus = functions.region('asia-southeast1').https.onCall(async (data, context) => {
+exports.getDeletePasswordStatus = functions.region('asia-southeast1').https.onCall(rateLimit.withRateLimit('read', async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Bạn cần đăng nhập.');
   }
@@ -493,10 +498,10 @@ exports.getDeletePasswordStatus = functions.region('asia-southeast1').https.onCa
   }
   const finalSnapshot = await ref.get();
   return { configured: Boolean(finalSnapshot.exists && finalSnapshot.data()?.hash) };
-});
+}));
 
 /** Deletes an incoming lot (admin/dev only, needs the delete password) together with its events and every downstream (child) lot. */
-exports.deleteIncomingLot = functions.region('asia-southeast1').https.onCall(async (data, context) => {
+exports.deleteIncomingLot = functions.region('asia-southeast1').https.onCall(rateLimit.withRateLimit('write', async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Bạn cần đăng nhập để xoá lô.');
   }
@@ -554,7 +559,11 @@ exports.deleteIncomingLot = functions.region('asia-southeast1').https.onCall(asy
   });
 
   return { lotId, lotCode: lotSnapshot.data()?.lotCode || '', deletedLots: lotRefs.length };
-});
+}));
+
+// Trang quản lý IP/UID bị cấm (chỉ dev): xem danh sách và gỡ cấm.
+exports.listRateLimitBans = rateLimit.listRateLimitBans;
+exports.unbanRateLimit = rateLimit.unbanRateLimit;
 
 // Các hàm xử lý công đoạn: updateLotStage, sendToSoak, rejectLot.
 Object.assign(exports, require('./traceability'));

@@ -3,6 +3,7 @@
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const workflow = require('./workflow');
+const { withRateLimit } = require('./rateLimit');
 
 const REGION = 'asia-southeast1';
 const { HttpsError } = functions.https;
@@ -286,13 +287,13 @@ async function commitStageResult(data, context, mode) {
 }
 
 /** Ghi kết quả một công đoạn: đạt đi tiếp, hư nhẹ tách ủ/làm lại, hư nặng loại bỏ. */
-exports.updateLotStage = functions.region(REGION).https.onCall((data, context) => commitStageResult(data, context, 'update'));
+exports.updateLotStage = functions.region(REGION).https.onCall(withRateLimit('write', (data, context) => commitStageResult(data, context, 'update')));
 
 /** Chuyển toàn bộ khối lượng hiện có của lô sang công đoạn ủ / làm lại. */
-exports.sendToSoak = functions.region(REGION).https.onCall((data, context) => commitStageResult(data, context, 'soak'));
+exports.sendToSoak = functions.region(REGION).https.onCall(withRateLimit('write', (data, context) => commitStageResult(data, context, 'soak')));
 
 /** Loại bỏ toàn bộ lô (bắt buộc ghi lý do). */
-exports.rejectLot = functions.region(REGION).https.onCall((data, context) => commitStageResult(data, context, 'reject'));
+exports.rejectLot = functions.region(REGION).https.onCall(withRateLimit('write', (data, context) => commitStageResult(data, context, 'reject')));
 
 /** Hoàn thành lô ở công đoạn Lựa sau ủ: đóng lô, số kg còn lại tính hao hụt, không tạo lô mới. */
-exports.completeLot = functions.region(REGION).https.onCall((data, context) => commitStageResult(data, context, 'complete'));
+exports.completeLot = functions.region(REGION).https.onCall(withRateLimit('write', (data, context) => commitStageResult(data, context, 'complete')));

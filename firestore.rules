@@ -175,6 +175,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Rate limit / ban state is server-private; the dev ban page reads it through Cloud Functions.
+    match /rate_limits/{id} {
+      allow read, write: if false;
+    }
+
     match /activityLogArchive/{archiveDate} {
       allow read, write: if isAdmin();
     }

@@ -3,6 +3,9 @@
 import assert from 'node:assert/strict';
 import Module, { createRequire } from 'node:module';
 
+// Tắt rate limit trong test này: nhiều thao tác liên tiếp của cùng một người sẽ bị cấm.
+process.env.RATE_LIMIT_DISABLED = '1';
+
 const require = createRequire(import.meta.url);
 
 /* ---------- Firestore giả lập ---------- */
@@ -53,7 +56,7 @@ class HttpsError extends Error {
   constructor(code, message) { super(message); this.code = code; }
 }
 const fakeAdmin = { firestore: Object.assign(() => fakeDb, { Timestamp, FieldValue }) };
-const fakeFunctions = { region: () => ({ https: { onCall: (handler) => handler } }), https: { HttpsError } };
+const fakeFunctions = { region: () => ({ https: { onCall: (handler) => handler } }), https: { HttpsError }, logger: { info() {}, warn() {}, error() {} } };
 const originalLoad = Module._load;
 Module._load = function (request, ...rest) {
   if (request === 'firebase-admin') return fakeAdmin;
