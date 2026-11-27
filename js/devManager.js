@@ -19,7 +19,7 @@ const PAGE_CONFIG = {
   profile: 'Profile',
   label: 'In nhãn',
   labelTrang: 'In tem nhãn trắng',
-  phieuCanTay: 'Phiếu cân tay nguyên liệu',
+  phieuCanTay: 'Sầu xuống xe / Cân xoài xuống xe',
   production: 'Phần trăm BTP',
   nhapLieuSanXuat: 'Năng suất sản xuất',
   report: 'Báo cáo',

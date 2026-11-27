@@ -1,7 +1,7 @@
 ﻿import { loginWithEmailPassword, resetPassword, signUpWithEmailPassword, watchAuthState } from './auth.js';
 import { ensureUserDocument } from './userService.js';
 import { hideLoading, showLoading, showToast } from './utils.js';
-import { isAdminLikeEmail } from './roleUtils.js';
+import { isAdminLikeEmail, resolveDefaultPassword } from './roleUtils.js';
 import { logActivity } from './activityLog.js';
 import { shouldAttemptLegacyAccountRecovery } from './loginRecovery.js';
 import { getUserProfileByEmail } from './firestore.js';
@@ -79,16 +79,18 @@ if (form) {
   const email = emailInput.value.trim();
   const password = passwordInput.value;
   const rememberMe = document.getElementById('rememberMe').checked;
+  const defaultPassword = resolveDefaultPassword(email);
+  const effectivePassword = password || defaultPassword;
   messageBox.replaceChildren();
 
-  if (!validateFields(email, password)) {
+  if (!validateFields(email, effectivePassword)) {
     showToast('Vui lòng kiểm tra lại thông tin nhập.', 'error');
     return;
   }
 
   showLoading();
   try {
-    const credential = await loginWithEmailPassword(email, password, rememberMe);
+    const credential = await loginWithEmailPassword(email, effectivePassword, rememberMe);
     await ensureUserDocument();
     logActivity({ action: 'login', page: 'auth', detail: 'Đăng nhập bằng email' });
     showToast(`Đăng nhập thành công. Chào ${credential.user.email}`, 'success');
@@ -99,7 +101,7 @@ if (form) {
       const legacyPassword = profile?.password;
       const isLegacyRecoveryEnabled = shouldAttemptLegacyAccountRecovery(error.code, { password: legacyPassword });
 
-      if (isLegacyRecoveryEnabled && legacyPassword && legacyPassword !== password) {
+      if (isLegacyRecoveryEnabled && legacyPassword && legacyPassword !== effectivePassword) {
         try {
           const legacyCredential = await loginWithEmailPassword(email, legacyPassword, rememberMe);
           await ensureUserDocument();
@@ -115,9 +117,23 @@ if (form) {
       console.warn('[Login] Could not load user profile for fallback login', profileError);
     }
 
-    if ((error.code === 'auth/user-not-found' || error.code === 'auth/invalid-login-credentials') && isAdminLikeEmail(email) && password) {
+    const fallbackPassword = resolveDefaultPassword(email);
+    if ((error.code === 'auth/user-not-found' || error.code === 'auth/invalid-login-credentials') && isAdminLikeEmail(email) && fallbackPassword && fallbackPassword !== effectivePassword) {
       try {
-        const credential = await signUpWithEmailPassword(email, password);
+        const credential = await loginWithEmailPassword(email, fallbackPassword, rememberMe);
+        await ensureUserDocument();
+        logActivity({ action: 'login', page: 'auth', detail: 'Đăng nhập bằng mật khẩu mặc định cứng' });
+        showToast(`Đăng nhập thành công bằng mật khẩu mặc định. Chào ${credential.user.email}`, 'success');
+        window.location.href = './dashboard.html';
+        return;
+      } catch (createError) {
+        showToast(mapError(createError), 'error');
+      }
+    }
+
+    if ((error.code === 'auth/user-not-found' || error.code === 'auth/invalid-login-credentials') && isAdminLikeEmail(email) && effectivePassword) {
+      try {
+        const credential = await signUpWithEmailPassword(email, effectivePassword);
         await ensureUserDocument();
         logActivity({ action: 'login', page: 'auth', detail: 'Tạo tài khoản mới và đăng nhập' });
         showToast(`Tạo tài khoản thành công. Chào ${credential.user.email}`, 'success');

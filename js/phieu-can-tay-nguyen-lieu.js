@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'chanhthu_can_tay_v4';
+const STORAGE_KEY = document.body.dataset.storageKey || 'chanhthu_can_tay_v4';
 
       // Danh mục mã – khớp với file mẫu
       const materialCatalog = [
@@ -95,6 +95,9 @@ const STORAGE_KEY = 'chanhthu_can_tay_v4';
       function genId() {
         return `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
       }
+      ['traceabilityProduct', 'traceabilityOrigin'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', saveLocal);
+      });
       function normalizeCode(v) { return String(v || '').trim().toUpperCase(); }
       function sanitize(v) {
         const n = Number(v);
@@ -432,6 +435,11 @@ const STORAGE_KEY = 'chanhthu_can_tay_v4';
           lastMa: state.lastMa,
           currentMa: els.currentMa.value,
           currentKho: els.currentKho ? els.currentKho.value : '',
+          traceabilityProduct: document.getElementById('traceabilityProduct')?.value || '',
+          traceabilityOrigin: document.getElementById('traceabilityOrigin')?.value || '',
+          traceabilityLotCode: document.getElementById('traceabilityLotCode')?.value || '',
+          traceabilityLotId: document.getElementById('traceabilityLotId')?.value || '',
+          traceabilityLinkedAt: document.getElementById('traceabilityLinkedAt')?.value || '',
           savedAt: new Date().toISOString()
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -455,6 +463,21 @@ const STORAGE_KEY = 'chanhthu_can_tay_v4';
           if (p.ttchSlip !== undefined) els.ttchSlip.value = p.ttchSlip;
           if (p.currentMa) els.currentMa.value = p.currentMa;
           if (p.currentKho && els.currentKho) els.currentKho.value = p.currentKho;
+          if (p.traceabilityProduct && document.getElementById('traceabilityProduct')) {
+            document.getElementById('traceabilityProduct').value = p.traceabilityProduct;
+          }
+          if (p.traceabilityOrigin && document.getElementById('traceabilityOrigin')) {
+            document.getElementById('traceabilityOrigin').value = p.traceabilityOrigin;
+          }
+          if (p.traceabilityLotCode && document.getElementById('traceabilityLotCode')) {
+            document.getElementById('traceabilityLotCode').value = p.traceabilityLotCode;
+          }
+          if (p.traceabilityLotId && document.getElementById('traceabilityLotId')) {
+            document.getElementById('traceabilityLotId').value = p.traceabilityLotId;
+          }
+          if (p.traceabilityLinkedAt && document.getElementById('traceabilityLinkedAt')) {
+            document.getElementById('traceabilityLinkedAt').value = p.traceabilityLinkedAt;
+          }
           if (p.lastMa) state.lastMa = p.lastMa;
           if (p.weightCols) state.weightCols = Math.min(11, Math.max(5, p.weightCols));
           if (Array.isArray(p.lots)) {
@@ -570,7 +593,8 @@ const STORAGE_KEY = 'chanhthu_can_tay_v4';
           const a = document.createElement('a');
           const plate = els.plateNumber.value.trim().replace(/\s+/g, '-').toUpperCase();
           a.href = url;
-          a.download = `phieu-can-tay-${plate}.xlsx`;
+          const exportName = document.body.dataset.exportName || 'phieu-can-tay';
+          a.download = `${exportName}-${plate}.xlsx`;
           document.body.appendChild(a);
           a.click();
           a.remove();
@@ -622,6 +646,10 @@ const STORAGE_KEY = 'chanhthu_can_tay_v4';
         els.plateNumber.value = '';
         els.ttchSlip.value = '';
         els.bigInput.value = '';
+        ['traceabilityLotCode', 'traceabilityLotId', 'traceabilityLinkedAt'].forEach(id => {
+          const field = document.getElementById(id);
+          if (field) field.value = '';
+        });
         syncDate();
         renderLots();
         renderAll();
@@ -703,6 +731,7 @@ const STORAGE_KEY = 'chanhthu_can_tay_v4';
           }
           saveLocal();
           showToast('Đã lưu phiếu (Local)', 'success');
+          document.dispatchEvent(new CustomEvent('weighing-saved'));
         });
 
         els.printBtn.addEventListener('click', () => window.print());

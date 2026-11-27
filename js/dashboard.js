@@ -37,7 +37,7 @@ const pagePermissionLabels = {
   report: 'Báo cáo',
   label: 'In nhãn',
   labelTrang: 'In tem nhãn trắng',
-  phieuCanTay: 'Phiếu cân tay nguyên liệu',
+  phieuCanTay: 'Sầu xuống xe / Cân xoài xuống xe',
   congTachMui: 'Năng xuất tách múi',
   traceability: 'Truy xuất xoài đông lạnh'
 };
@@ -150,8 +150,18 @@ function renderTeamOptions() {
     congTachMuiTeams.forEach((team) => select.appendChild(new Option(`${team.id} - ${team.name}`, team.id)));
   });
 }
-// Tạo mật khẩu ngẫu nhiên cho tài khoản mới khi cần.
-function generatePassword(length = 12) {
+// Tạo mật khẩu mặc định theo vai trò hoặc sinh ngẫu nhiên khi cần.
+function generatePassword(length = 12, role = 'staff') {
+  const rolePasswords = {
+    dev: 'Dev@123',
+    admin: 'Admin@123',
+    staff: 'ChanhThu@2026'
+  };
+
+  if (rolePasswords[role]) {
+    return rolePasswords[role];
+  }
+
   const charset = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
   let password = '';
   for (let i = 0; i < length; i += 1) {
@@ -316,9 +326,9 @@ createUserForm?.addEventListener('submit', async (event) => {
   const teamIdInput = document.getElementById('createUserTeamId');
 
   const email = emailInput.value.trim();
-  const password = passwordInput.value.trim() || generatePassword();
-  const displayName = nameInput.value.trim();
   const role = roleInput.value;
+  const password = passwordInput.value.trim() || generatePassword(12, role);
+  const displayName = nameInput.value.trim();
   const isFullAccessRole = role === 'admin' || role === 'dev';
   const department = isFullAccessRole ? [...ALL_PAGE_PERMISSIONS] : getAllPagePermissions();
   const teamId = teamIdInput.value;
@@ -465,6 +475,9 @@ function renderProfile(user, profile) {
     const hasAccess = isFullAccessUser || permissions.includes(pageKey);
     item.classList.toggle('d-none', !hasAccess);
   });
+  document.querySelectorAll('[data-dev-only]').forEach((item) => {
+    item.classList.toggle('d-none', role !== 'dev');
+  });
 
   const adminMenuItems = document.querySelectorAll('.admin-only');
   adminMenuItems.forEach((item) => {
@@ -475,9 +488,6 @@ function renderProfile(user, profile) {
   const canManageUsers = hasUserManagementPermission(role, currentUserPermissions);
   const userManagementSection = document.getElementById('userManagementSection');
   userManagementSection?.classList.toggle('d-none', !canManageUsers);
-  document.querySelectorAll('[data-dev-only]').forEach((item) => {
-    item.classList.toggle('d-none', role !== 'dev');
-  });
 
   document.querySelectorAll('[data-page-access]').forEach((card) => {
     const pageKey = card.dataset.pageAccess;

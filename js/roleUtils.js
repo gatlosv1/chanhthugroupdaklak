@@ -3,6 +3,13 @@ const DEV_EMAILS = ['gatlosv1@gmail.com'];
 // Danh sách email cố định gán quyền admin
 const ADMIN_EMAILS = ['admin@company.com', 'admin2@company.com', 'admin@example.com'];
 
+// Mật khẩu mặc định cứng được dùng cho demo/local để không cần nhập lại mỗi lần
+export const DEFAULT_PASSWORDS = {
+  dev: 'Dev@123',
+  admin: 'Admin@123',
+  staff: 'ChanhThu@2026'
+};
+
 // Chuẩn hóa chuỗi vai trò về 3 loại
 // dev, admin hoặc staff
 export function normalizeUserRole(role = '') {
@@ -60,6 +67,20 @@ export function resolveInitialRole(email, existingRole = '') {
   }
 
   return 'staff';
+}
+
+export function resolveDefaultPassword(email = '') {
+  const normalizedEmail = (email || '').trim().toLowerCase();
+
+  if (isDevLikeEmail(normalizedEmail)) {
+    return DEFAULT_PASSWORDS.dev;
+  }
+
+  if (isAdminLikeEmail(normalizedEmail)) {
+    return DEFAULT_PASSWORDS.admin;
+  }
+
+  return DEFAULT_PASSWORDS.staff;
 }
 
 

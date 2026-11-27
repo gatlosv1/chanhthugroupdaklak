@@ -43,7 +43,8 @@
           <a class="sidebar-link" href="./production.html" data-page="production">Phần trăm BTP</a>
           <a class="sidebar-link" href="./nhap-lieu-san-xuat.html" data-page="nhapLieuSanXuat">Năng suất sản xuất</a>
           <a class="sidebar-link" href="./report.html" data-page="report">Báo cáo</a>
-          <a class="sidebar-link" href="./phieu-can-tay-nguyen-lieu.html" data-page="phieuCanTay">Phiếu cân tay nguyên liệu</a>
+          <a class="sidebar-link" href="./phieu-can-tay-nguyen-lieu.html" data-page="phieuCanTay">Sầu xuống xe</a>
+          <a class="sidebar-link" href="./can-xoai-xuong-xe.html" data-page="phieuCanTay">Cân xoài xuống xe</a>
           <a class="sidebar-link" href="./cong-tach-mui.html" data-page="congTachMui">Năng xuất tách múi</a>
           <a class="sidebar-link" href="./traceability.html" data-page="traceability">Truy xuất xoài đông lạnh</a>
           <a class="sidebar-link admin-only" id="manageUsersMenu" href="#">Quản lý User</a>
@@ -108,9 +109,14 @@
                 <a class="inline-flex mt-4 rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600" href="./report.html">Mở Báo cáo</a>
               </div>
               <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-page-access="phieuCanTay">
-                <h3 class="text-base font-semibold text-slate-800">Phiếu cân tay nguyên liệu</h3>
+                <h3 class="text-base font-semibold text-slate-800">Sầu xuống xe</h3>
                 <p class="mt-2 text-sm text-slate-600">Nhập và theo dõi số cân nguyên liệu theo từng lô, giúp kiểm tra nhanh tổng khối lượng và hao hụt.</p>
-                <a class="inline-flex mt-4 rounded-xl bg-amber-400 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-500" href="./phieu-can-tay-nguyen-lieu.html">Mở Phiếu cân tay nguyên liệu</a>
+                <a class="inline-flex mt-4 rounded-xl bg-amber-400 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-500" href="./phieu-can-tay-nguyen-lieu.html">Mở Sầu xuống xe</a>
+              </div>
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-page-access="phieuCanTay">
+                <h3 class="text-base font-semibold text-slate-800">Cân xoài xuống xe</h3>
+                <p class="mt-2 text-sm text-slate-600">Lưu số cân xe xoài và tự tạo lô đầu vào trong Truy xuất xoài đông lạnh.</p>
+                <a class="inline-flex mt-4 rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600" href="./can-xoai-xuong-xe.html">Mở Cân xoài xuống xe</a>
               </div>
               <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-page-access="congTachMui">
                 <h3 class="text-base font-semibold text-slate-800">Năng xuất tách múi</h3>
@@ -188,7 +194,7 @@
                     <option value="report">Báo cáo</option>
                     <option value="label">In nhãn</option>
                     <option value="labelTrang">In tem nhãn trắng</option>
-                    <option value="phieuCanTay">Phiếu cân tay nguyên liệu</option>
+                    <option value="phieuCanTay">Sầu xuống xe / Cân xoài xuống xe</option>
                     <option value="congTachMui">Năng xuất tách múi</option>
                     <option value="traceability">Truy xuất xoài đông lạnh</option>
                   </select>
@@ -199,7 +205,7 @@
                     <option value="report">Báo cáo</option>
                     <option value="label">In nhãn</option>
                     <option value="labelTrang">In tem nhãn trắng</option>
-                    <option value="phieuCanTay">Phiếu cân tay nguyên liệu</option>
+                    <option value="phieuCanTay">Sầu xuống xe / Cân xoài xuống xe</option>
                     <option value="congTachMui">Năng xuất tách múi</option>
                     <option value="traceability">Truy xuất xoài đông lạnh</option>
                   </select>
@@ -210,7 +216,7 @@
                     <option value="report">Báo cáo</option>
                     <option value="label">In nhãn</option>
                     <option value="labelTrang">In tem nhãn trắng</option>
-                    <option value="phieuCanTay">Phiếu cân tay nguyên liệu</option>
+                    <option value="phieuCanTay">Sầu xuống xe / Cân xoài xuống xe</option>
                     <option value="congTachMui">Năng xuất tách múi</option>
                     <option value="traceability">Truy xuất xoài đông lạnh</option>
                   </select>
@@ -307,7 +313,7 @@
                             <option value="report">Báo cáo</option>
                             <option value="label">In nhãn</option>
                             <option value="labelTrang">In tem nhãn trắng</option>
-                            <option value="phieuCanTay">Phiếu cân tay nguyên liệu</option>
+                            <option value="phieuCanTay">Sầu xuống xe / Cân xoài xuống xe</option>
                             <option value="congTachMui">Năng xuất tách múi</option>
                             <option value="traceability">Truy xuất xoài đông lạnh</option>
                           </select>
@@ -320,7 +326,7 @@
                             <option value="report">Báo cáo</option>
                             <option value="label">In nhãn</option>
                             <option value="labelTrang">In tem nhãn trắng</option>
-                            <option value="phieuCanTay">Phiếu cân tay nguyên liệu</option>
+                            <option value="phieuCanTay">Sầu xuống xe / Cân xoài xuống xe</option>
                             <option value="congTachMui">Năng xuất tách múi</option>
                             <option value="traceability">Truy xuất xoài đông lạnh</option>
                           </select>
@@ -333,7 +339,7 @@
                             <option value="report">Báo cáo</option>
                             <option value="label">In nhãn</option>
                             <option value="labelTrang">In tem nhãn trắng</option>
-                            <option value="phieuCanTay">Phiếu cân tay nguyên liệu</option>
+                            <option value="phieuCanTay">Sầu xuống xe / Cân xoài xuống xe</option>
                             <option value="congTachMui">Năng xuất tách múi</option>
                             <option value="traceability">Truy xuất xoài đông lạnh</option>
                           </select>
